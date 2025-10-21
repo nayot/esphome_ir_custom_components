@@ -4,38 +4,35 @@
 #include "esphome/components/climate/climate.h"
 #include "esphome/components/remote_transmitter/remote_transmitter.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/remote_receiver/remote_receiver.h" // Correct include
 
 namespace esphome {
 namespace carrier_ac {
 
-class CarrierACClimate : public climate::Climate, public Component {
+class CarrierACClimate : public climate::Climate, public Component,
+                         public remote_base::RemoteReceiverListener { // Correct inheritance
  public:
-  // --- Setter functions called by Python ---
+  // --- Setter functions ---
   void set_transmitter(remote_transmitter::RemoteTransmitterComponent *transmitter) {
     this->transmitter_ = transmitter;
   }
   void set_sensor(sensor::Sensor *sensor) { this->sensor_ = sensor; }
+  // --- REMOVED set_receiver ---
 
-  // --- Functions we MUST override ---
-  
-  // Defines the capabilities of our component (modes, fans, temps)
+  // --- Overridden functions ---
   climate::ClimateTraits traits() override;
-
-  // Called by ESPHome whenever the state needs to change
   void control(const climate::ClimateCall &call) override;
-
-  // Standard component functions
   void setup() override;
   void dump_config() override;
+  bool on_receive(remote_base::RemoteReceiveData data) override;
+
 
  protected:
-  // --- Our Helper Functions ---
-  
-  // Sends the correct IR code based on the current internal state
+  // --- Helper Functions ---
   void send_ir_code_();
-
-  // Helper to physically send the raw code
   void transmit_raw_code_(const int32_t *data, size_t len);
+  bool compare_raw_code_(const remote_base::RemoteReceiveData &data, const int32_t *match_code, size_t match_len, int tolerance_percent = 25);
+
 
   // --- Member Variables ---
   remote_transmitter::RemoteTransmitterComponent *transmitter_{nullptr};

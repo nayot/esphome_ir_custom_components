@@ -118,6 +118,46 @@ climate::ClimateTraits CarrierACClimate::traits() {
 
   return traits;
 }
+// Helper function to compare received timings with stored codes
+bool CarrierACClimate::compare_raw_code_(const remote_base::RemoteReceiveData &data, const int32_t *match_code, size_t match_len, int tolerance_percent) {
+    // if (!data.is_raw()) {
+    //     // We only handle raw codes
+    //     return false;
+    // }
+    if (data.size() != match_len) {
+        // Different number of pulses/spaces
+        return false;
+    }
+
+    // Convert percentage tolerance to microseconds range
+    int32_t tolerance_us_low = 100 - tolerance_percent;
+    int32_t tolerance_us_high = 100 + tolerance_percent;
+
+    for (size_t i = 0; i < match_len; i++) {
+        // Calculate the allowed range for the current timing value
+        int32_t expected = match_code[i];
+        int32_t actual = data.get_raw_data()[i]; // ESPHome stores raw data directly
+
+        // Need absolute values for comparison range calculation
+        int32_t lower_bound = (abs(expected) * tolerance_us_low) / 100;
+        int32_t upper_bound = (abs(expected) * tolerance_us_high) / 100;
+
+        // Check if the signs match (both mark or both space)
+        if ((expected > 0 && actual < 0) || (expected < 0 && actual > 0)) {
+            return false; // Sign mismatch
+        }
+
+        // Check if the absolute value is within the tolerance range
+        if (abs(actual) < lower_bound || abs(actual) > upper_bound) {
+            // Timing mismatch
+            // Optional: Log the mismatch for debugging
+            // ESP_LOGVV(TAG, "Timing mismatch at index %d: Expected %d, Got %d (Range %d-%d)", i, expected, actual, lower_bound, upper_bound);
+            return false;
+        }
+    }
+    // If we get here, all timings matched within tolerance
+    return true;
+}
 
 // --- Main control function (Restored) ---
 void CarrierACClimate::control(const climate::ClimateCall &call) {
@@ -251,6 +291,202 @@ void CarrierACClimate::send_ir_code_() {
   } else {
     ESP_LOGE(TAG, "Could not find a matching IR code for the current state!");
   }
+}
+
+// This function gets called automatically by the receiver component
+bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
+  ESP_LOGD(TAG, "Received IR Code...");
+
+  // --- Try to match the received code against ALL known codes ---
+  // Note: This is inefficient but straightforward. Optimization could map codes differently.
+
+  // 1. Check OFF
+  if (compare_raw_code_(data, CODE_OFF, sizeof(CODE_OFF) / sizeof(CODE_OFF[0]))) {
+    ESP_LOGD(TAG, "Matched OFF code");
+    this->mode = climate::CLIMATE_MODE_OFF;
+    this->publish_state(); // Update Home Assistant
+    return true; // We handled this code
+  }
+
+  // 2. Check FAN ONLY modes
+  if (compare_raw_code_(data, CODE_FAN_LOW, sizeof(CODE_FAN_LOW) / sizeof(CODE_FAN_LOW[0]))) {
+    ESP_LOGD(TAG, "Matched FAN LOW code");
+    this->mode = climate::CLIMATE_MODE_FAN_ONLY;
+    this->fan_mode = climate::CLIMATE_FAN_LOW;
+    this->publish_state();
+    return true;
+  }
+  if (compare_raw_code_(data, CODE_FAN_MEDIUM, sizeof(CODE_FAN_MEDIUM) / sizeof(CODE_FAN_MEDIUM[0]))) {
+    ESP_LOGD(TAG, "Matched FAN MEDIUM code");
+    this->mode = climate::CLIMATE_MODE_FAN_ONLY;
+    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+    this->publish_state();
+    return true;
+  }
+  if (compare_raw_code_(data, CODE_FAN_HIGH, sizeof(CODE_FAN_HIGH) / sizeof(CODE_FAN_HIGH[0]))) {
+    ESP_LOGD(TAG, "Matched FAN HIGH code");
+    this->mode = climate::CLIMATE_MODE_FAN_ONLY;
+    this->fan_mode = climate::CLIMATE_FAN_HIGH;
+    this->publish_state();
+    return true;
+  }
+
+  // 3. Check COOL modes (This will be the largest section)
+  // Temp = 22
+  if (compare_raw_code_(data, CODE_COOL_22_LOW, sizeof(CODE_COOL_22_LOW) / sizeof(CODE_COOL_22_LOW[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 22 LOW code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 22.0f;
+    this->fan_mode = climate::CLIMATE_FAN_LOW;
+    this->publish_state();
+    return true;
+  }
+  if (compare_raw_code_(data, CODE_COOL_22_MEDIUM, sizeof(CODE_COOL_22_MEDIUM) / sizeof(CODE_COOL_22_MEDIUM[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 22 MEDIUM code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 22.0f;
+    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+    this->publish_state();
+    return true;
+  }
+   if (compare_raw_code_(data, CODE_COOL_22_HIGH, sizeof(CODE_COOL_22_HIGH) / sizeof(CODE_COOL_22_HIGH[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 22 HIGH code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 22.0f;
+    this->fan_mode = climate::CLIMATE_FAN_HIGH;
+    this->publish_state();
+    return true;
+  }
+
+ // Temp = 23 
+  if (compare_raw_code_(data, CODE_COOL_23_LOW, sizeof(CODE_COOL_23_LOW) / sizeof(CODE_COOL_23_LOW[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 23 LOW code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 23.0f;
+    this->fan_mode = climate::CLIMATE_FAN_LOW;
+    this->publish_state();
+    return true;
+  }
+  if (compare_raw_code_(data, CODE_COOL_23_MEDIUM, sizeof(CODE_COOL_23_MEDIUM) / sizeof(CODE_COOL_23_MEDIUM[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 23 MEDIUM code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 23.0f;
+    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+    this->publish_state();
+    return true;
+  }
+   if (compare_raw_code_(data, CODE_COOL_23_HIGH, sizeof(CODE_COOL_23_HIGH) / sizeof(CODE_COOL_23_HIGH[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 23 HIGH code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 23.0f;
+    this->fan_mode = climate::CLIMATE_FAN_HIGH;
+    this->publish_state();
+    return true;
+  }
+
+  if (compare_raw_code_(data, CODE_COOL_24_LOW, sizeof(CODE_COOL_24_LOW) / sizeof(CODE_COOL_24_LOW[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 24 LOW code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 24.0f;
+    this->fan_mode = climate::CLIMATE_FAN_LOW;
+    this->publish_state();
+    return true;
+  }
+  if (compare_raw_code_(data, CODE_COOL_24_MEDIUM, sizeof(CODE_COOL_24_MEDIUM) / sizeof(CODE_COOL_24_MEDIUM[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 24 MEDIUM code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 24.0f;
+    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+    this->publish_state();
+    return true;
+  }
+   if (compare_raw_code_(data, CODE_COOL_24_HIGH, sizeof(CODE_COOL_24_HIGH) / sizeof(CODE_COOL_24_HIGH[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 24 HIGH code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 24.0f;
+    this->fan_mode = climate::CLIMATE_FAN_HIGH;
+    this->publish_state();
+    return true;
+  }
+
+  if (compare_raw_code_(data, CODE_COOL_25_LOW, sizeof(CODE_COOL_25_LOW) / sizeof(CODE_COOL_25_LOW[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 25 LOW code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 25.0f;
+    this->fan_mode = climate::CLIMATE_FAN_LOW;
+    this->publish_state();
+    return true;
+  }
+  if (compare_raw_code_(data, CODE_COOL_25_MEDIUM, sizeof(CODE_COOL_25_MEDIUM) / sizeof(CODE_COOL_25_MEDIUM[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 25 MEDIUM code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 25.0f;
+    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+    this->publish_state();
+    return true;
+  }
+   if (compare_raw_code_(data, CODE_COOL_25_HIGH, sizeof(CODE_COOL_25_HIGH) / sizeof(CODE_COOL_25_HIGH[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 25 HIGH code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 25.0f;
+    this->fan_mode = climate::CLIMATE_FAN_HIGH;
+    this->publish_state();
+    return true;
+  }
+
+  if (compare_raw_code_(data, CODE_COOL_26_LOW, sizeof(CODE_COOL_26_LOW) / sizeof(CODE_COOL_26_LOW[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 26 LOW code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 26.0f;
+    this->fan_mode = climate::CLIMATE_FAN_LOW;
+    this->publish_state();
+    return true;
+  }
+  if (compare_raw_code_(data, CODE_COOL_26_MEDIUM, sizeof(CODE_COOL_26_MEDIUM) / sizeof(CODE_COOL_26_MEDIUM[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 26 MEDIUM code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 26.0f;
+    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+    this->publish_state();
+    return true;
+  }
+   if (compare_raw_code_(data, CODE_COOL_26_HIGH, sizeof(CODE_COOL_26_HIGH) / sizeof(CODE_COOL_26_HIGH[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 26 HIGH code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 26.0f;
+    this->fan_mode = climate::CLIMATE_FAN_HIGH;
+    this->publish_state();
+    return true;
+  }
+
+  if (compare_raw_code_(data, CODE_COOL_27_LOW, sizeof(CODE_COOL_27_LOW) / sizeof(CODE_COOL_27_LOW[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 27 LOW code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 27.0f;
+    this->fan_mode = climate::CLIMATE_FAN_LOW;
+    this->publish_state();
+    return true;
+  }
+  if (compare_raw_code_(data, CODE_COOL_27_MEDIUM, sizeof(CODE_COOL_27_MEDIUM) / sizeof(CODE_COOL_27_MEDIUM[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 27 MEDIUM code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 27.0f;
+    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+    this->publish_state();
+    return true;
+  }
+   if (compare_raw_code_(data, CODE_COOL_27_HIGH, sizeof(CODE_COOL_27_HIGH) / sizeof(CODE_COOL_27_HIGH[0]))) {
+    ESP_LOGD(TAG, "Matched COOL 27 HIGH code");
+    this->mode = climate::CLIMATE_MODE_COOL;
+    this->target_temperature = 27.0f;
+    this->fan_mode = climate::CLIMATE_FAN_HIGH;
+    this->publish_state();
+    return true;
+  }
+
+  // --- If no match found ---
+  ESP_LOGV(TAG, "Received code did not match any known codes."); // Use VERBOSE level for non-matches
+  return false; // Let other listeners (if any) try to handle it
 }
 
 }  // namespace carrier_ac
