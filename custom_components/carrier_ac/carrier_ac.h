@@ -5,6 +5,12 @@
 #include "esphome/components/remote_transmitter/remote_transmitter.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/remote_receiver/remote_receiver.h" // Correct include
+// includes for decoding function
+#include "esphome/core/log.h"
+#include <string>       // For std::string
+#include <sstream>      // For std::stringstream (hex conversion)
+#include <iomanip>      // For std::setw and std::setfill
+#include <cstdint>      // For uint64_t
 
 namespace esphome {
 namespace carrier_ac {

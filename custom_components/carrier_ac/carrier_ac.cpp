@@ -15,7 +15,7 @@ static const char *const TAG = "carrier_ac.climate";
 
 const uint32_t IR_FREQUENCY = 38000; // 38kHz. Change if yours is different.
 
-static const int32_t CODE_OFF[] = {9247, -4376, 659, -465, 661, -464, 662, -1565, 660, -466, 660, -465, 687, -437, 662, -463, 663, -464, 690, -437, 660, -1564, 690, -436, 690, -435, 691, -1535, 662, -463, 690, -1537, 687, -439, 660, -464, 691, -436, 690, -435, 690, -436, 661, -464, 661, -466, 660, -464, 690, -438, 688, -437, 688, -437, 690, -436, 660, -466, 636, -490, 660, -464, 661, -465, 661, -466, 689, -437, 659, -467, 688, -437, 660, -466, 660, -466, 660, -466, 686, -438, 661, -465, 689, -1538, 687, -1538, 660, -1564, 689, -1539, 685, -1538, 689, -438, 688, -437, 660, -1566, 659, -466, 660, -466, 688, -437, 688, -439, 659, -464, 662, -1566, 686, -1541, 658, -1566, 659, -464, 662, -465, 688, -1538, 660, -1564, 688, -1539, 660, -1564, 661, -465, 688, -1538, 660};
+static const int32_t CODE_OFF[] = {9273, -4389, 662, -467, 662, -467, 662, -1570, 662, -467, 662, -466, 663, -466, 663, -466, 662, -468, 661, -468, 662, -1570, 662, -466, 663, -467, 637, -1596, 661, -1569, 666, -464, 661, -468, 662, -467, 662, -466, 638, -496, 658, -467, 662, -467, 662, -467, 661, -469, 661, -466, 644, -486, 637, -492, 662, -467, 662, -468, 661, -467, 662, -470, 659, -467, 691, -439, 661, -469, 659, -468, 661, -468, 661, -469, 661, -468, 661, -467, 662, -467, 662, -468, 661, -1571, 661, -1571, 661, -468, 662, -1570, 661, -1571, 661, -468, 661, -468, 661, -1574, 632, -494, 661, -468, 661, -468, 661, -467, 661, -469, 660, -1572, 661, -1571, 661, -1572, 664, -464, 661, -468, 661, -468, 660, -469, 661, -468, 660, -469, 661, -468, 661, -468, 661}; 
 static const int32_t CODE_COOL_22_AUTO[] = {9253, -4371, 666, -460, 666, -460, 666, -1560, 666, -460, 666, -1560, 665, -461, 666, -462, 664, -460, 666, -460, 666, -1560, 694, -432, 665, -461, 665, -462, 664, -1564, 662, -1561, 692, -1535, 664, -463, 663, -462, 664, -462, 663, -461, 666, -462, 663, -464, 663, -462, 664, -462, 663, -462, 665, -462, 663, -463, 664, -462, 663, -462, 664, -464, 662, -463, 663, -464, 662, -464, 663, -463, 662, -462, 664, -463, 663, -463, 664, -460, 665, -463, 663, -464, 662, -1562, 663, -464, 690, -1537, 690, -433, 664, -1564, 662, -463, 663, -464, 663, -1561, 664, -462, 664, -464, 662, -463, 663, -463, 663, -462, 664, -1563, 664, -1561, 664, -1562, 664, -462, 664, -462, 664, -1562, 664, -1563, 663, -1564, 661, -1564, 662, -463, 663, -1568, 658};
 static const int32_t CODE_COOL_23_AUTO[] = {9278, -4348, 690, -437, 686, -439, 690, -1536, 662, -463, 663, -1563, 663, -466, 660, -465, 663, -461, 664, -462, 665, -1561, 639, -488, 663, -463, 688, -1537, 666, -461, 664, -462, 689, -436, 689, -438, 686, -441, 662, -464, 637, -488, 662, -468, 659, -463, 662, -465, 687, -441, 685, -438, 662, -464, 637, -492, 635, -489, 637, -487, 664, -465, 662, -462, 663, -464, 662, -466, 659, -464, 637, -489, 661, -468, 634, -490, 661, -464, 688, -441, 634, -490, 662, -1564, 661, -465, 661, -465, 687, -1537, 663, -1564, 663, -464, 636, -490, 661, -1565, 684, -441, 661, -464, 638, -489, 662, -464, 639, -488, 635, -1591, 636, -1588, 663, -1565, 661, -465, 636, -489, 661, -1566, 663, -1563, 636, -1588, 638, -1590, 636, -490, 660, -1566, 660};
 static const int32_t CODE_COOL_24_AUTO[] = {9254, -4373, 664, -462, 664, -463, 667, -1557, 665, -462, 664, -1563, 664, -462, 692, -434, 693, -434, 663, -462, 664, -1561, 665, -462, 664, -462, 664, -1562, 664, -463, 663, -463, 662, -1562, 665, -460, 666, -462, 664, -463, 691, -435, 662, -461, 666, -460, 666, -460, 666, -461, 664, -462, 664, -463, 690, -437, 663, -462, 664, -462, 664, -461, 665, -461, 665, -461, 665, -462, 664, -462, 664, -463, 690, -435, 664, -463, 663, -464, 663, -460, 665, -461, 665, -1562, 667, -460, 664, -461, 665, -462, 664, -1564, 662, -462, 664, -463, 663, -1563, 691, -434, 664, -461, 668, -460, 663, -464, 661, -462, 664, -1563, 664, -1562, 664, -1564, 662, -463, 663, -461, 665, -1563, 663, -1562, 664, -1563, 663, -1562, 664, -462, 664, -1563, 663};
@@ -118,16 +118,97 @@ climate::ClimateTraits CarrierACClimate::traits() {
 
   return traits;
 }
+
+// --- BEGIN NEW DECODER FUNCTION ---
+
+// Define the timing thresholds (in microseconds)
+// A "space" (negative value) shorter than this is a '0'
+static const int32_t SPACE_ZERO_MAX_US = 700;
+// A "space" longer than this is a '1'
+static const int32_t SPACE_ONE_MIN_US = 1300;
+
+/**
+ * @brief Decodes raw IR timings into a 64-bit hexadecimal string.
+ * * Assumes Carrier/Midea protocol: Header + 64 data bits.
+ * The bit value is determined by the duration of the SPACE.
+ *
+ * @param data The raw timing data from the IR receiver.
+ * @return A std::string containing the 16-character hex code (e.g., "A1B2C3D4E5F6A7B8")
+ * or an error message.
+ */
+std::string decode_to_hex(remote_base::RemoteReceiveData data) {
+  // A full 64-bit signal has 1 header pair, 64 data pairs, and 1 final pulse.
+  // 1 (pulse) + 1 (space) + 64*2 (pulse+space) + 1 (pulse) = 131
+  if (data.size() < 131) {
+    return "Error: Invalid length. Received " + std::to_string(data.size()) + " elements.";
+  }
+
+  uint64_t decoded_data = 0; // 64-bit integer to hold our bits
+  int bit_count = 0;
+
+  // Start at index 2 (skipping the header pulse and space)
+  // Iterate by 2 (pulse + space) for each bit
+  // Stop before the last pulse and once we have 64 bits
+  for (size_t i = 2; i < data.size() - 1 && bit_count < 64; i += 2) {
+    // The bit value is in the SPACE timing (the negative number)
+    int32_t space_duration = std::abs(data[i + 1]);
+
+    // Shift our 64-bit integer to the left to make room for the new bit
+    decoded_data <<= 1;
+
+    if (space_duration >= SPACE_ONE_MIN_US) {
+      // It's a '1' bit. Set the last bit.
+      decoded_data |= 1;
+    } else if (space_duration < SPACE_ZERO_MAX_US) {
+      // It's a '0' bit. We already shifted, so the last bit is 0.
+      // Do nothing.
+    } else {
+      // Ambiguous timing
+      return "Error: Ambiguous space timing at index " + std::to_string(i + 1) + 
+             " (" + std::to_string(space_duration) + "us)";
+    }
+    bit_count++;
+  }
+
+  if (bit_count < 64) {
+    return "Error: Decoded only " + std::to_string(bit_count) + " bits.";
+  }
+
+  // Convert the 64-bit integer to a 16-character hex string
+  std::stringstream ss;
+  ss << std::hex << std::setfill('0') << std::setw(16) << decoded_data;
+  return ss.str();
+}
+
+// --- END NEW DECODER FUNCTION ---
+
 // Helper function to compare received timings with stored codes
 bool CarrierACClimate::compare_raw_code_(const remote_base::RemoteReceiveData &data, const int32_t *match_code, size_t match_len, int tolerance_percent) {
     // if (!data.is_raw()) {
     //     // We only handle raw codes
     //     return false;
     // }
-    if (data.size() != match_len) {
+
+    size_t received_len = data.size();
+
+    // --- ADD DETAILED LOGGING ---
+    ESP_LOGV(TAG, "Compare Check: Received size=%d, Expected size=%d", data.size(), match_len);
+    // --- END LOGGING ---
+
+    if (received_len > 0 && data[received_len - 1] < -5000) { 
+      // If a terminator is present, reduce the effective length for comparison by 1.
+      received_len--;
+      ESP_LOGV(TAG, "Removed final terminator pulse/space. Effective size: %zu", received_len);
+    }
+
+    if (received_len != match_len) {
         // Different number of pulses/spaces
+        ESP_LOGV(TAG, "Different number of pulses/spaces");
         return false;
     }
+    // --- ADD SUCCESS LOG ---  
+    ESP_LOGV(TAG, "Compare Success: Sizes match, proceeding with tolerance check.");
+    // --- END LOGGING ---
 
     // Convert percentage tolerance to microseconds range
     int32_t tolerance_us_low = 100 - tolerance_percent;
@@ -296,12 +377,41 @@ void CarrierACClimate::send_ir_code_() {
 // This function gets called automatically by the receiver component
 bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
   ESP_LOGD(TAG, "Received IR Code...");
+  
+  // Log the decoded signal
+  std::string hex_code = decode_to_hex(data);
+  ESP_LOGD(TAG, "Received IR code. HEX: %s", hex_code.c_str());
 
   // --- Try to match the received code against ALL known codes ---
   // Note: This is inefficient but straightforward. Optimization could map codes differently.
+  // Tolerance
+
+
+  // === DEBUG RAW DATA DUMP START ===
+  ESP_LOGV(TAG, "Received IR Data Dump (Size: %zu):", data.size());
+
+  std::string raw_code_chunk = "";
+  for (size_t i = 0; i < data.size(); i++) {
+    // Append the current element
+    raw_code_chunk += esphome::to_string(data[i]);
+
+    // Check if we need a comma/space
+    if (i < data.size() - 1) {
+      raw_code_chunk += ", ";
+    }
+
+    // Print chunks of 20 elements to avoid truncation (adjust 20 if needed)
+    if (((i + 1) % 20 == 0) || (i == data.size() - 1)) {
+        ESP_LOGV(TAG, "  [RAW Part %zu]: %s", (i / 20) + 1, raw_code_chunk.c_str());
+        raw_code_chunk = ""; // Reset the chunk string
+    }
+  }
+  // === DEBUG RAW DATA DUMP END ===
+ 
+  int custom_tolerance = 35;
 
   // 1. Check OFF
-  if (compare_raw_code_(data, CODE_OFF, sizeof(CODE_OFF) / sizeof(CODE_OFF[0]))) {
+  if (compare_raw_code_(data, CODE_OFF, sizeof(CODE_OFF) / sizeof(CODE_OFF[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched OFF code");
     this->mode = climate::CLIMATE_MODE_OFF;
     this->publish_state(); // Update Home Assistant
@@ -309,21 +419,21 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
   }
 
   // 2. Check FAN ONLY modes
-  if (compare_raw_code_(data, CODE_FAN_LOW, sizeof(CODE_FAN_LOW) / sizeof(CODE_FAN_LOW[0]))) {
+  if (compare_raw_code_(data, CODE_FAN_LOW, sizeof(CODE_FAN_LOW) / sizeof(CODE_FAN_LOW[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched FAN LOW code");
     this->mode = climate::CLIMATE_MODE_FAN_ONLY;
     this->fan_mode = climate::CLIMATE_FAN_LOW;
     this->publish_state();
     return true;
   }
-  if (compare_raw_code_(data, CODE_FAN_MEDIUM, sizeof(CODE_FAN_MEDIUM) / sizeof(CODE_FAN_MEDIUM[0]))) {
+  if (compare_raw_code_(data, CODE_FAN_MEDIUM, sizeof(CODE_FAN_MEDIUM) / sizeof(CODE_FAN_MEDIUM[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched FAN MEDIUM code");
     this->mode = climate::CLIMATE_MODE_FAN_ONLY;
     this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
     this->publish_state();
     return true;
   }
-  if (compare_raw_code_(data, CODE_FAN_HIGH, sizeof(CODE_FAN_HIGH) / sizeof(CODE_FAN_HIGH[0]))) {
+  if (compare_raw_code_(data, CODE_FAN_HIGH, sizeof(CODE_FAN_HIGH) / sizeof(CODE_FAN_HIGH[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched FAN HIGH code");
     this->mode = climate::CLIMATE_MODE_FAN_ONLY;
     this->fan_mode = climate::CLIMATE_FAN_HIGH;
@@ -333,7 +443,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
 
   // 3. Check COOL modes (This will be the largest section)
   // Temp = 22
-  if (compare_raw_code_(data, CODE_COOL_22_LOW, sizeof(CODE_COOL_22_LOW) / sizeof(CODE_COOL_22_LOW[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_22_LOW, sizeof(CODE_COOL_22_LOW) / sizeof(CODE_COOL_22_LOW[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 22 LOW code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 22.0f;
@@ -341,7 +451,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-  if (compare_raw_code_(data, CODE_COOL_22_MEDIUM, sizeof(CODE_COOL_22_MEDIUM) / sizeof(CODE_COOL_22_MEDIUM[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_22_MEDIUM, sizeof(CODE_COOL_22_MEDIUM) / sizeof(CODE_COOL_22_MEDIUM[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 22 MEDIUM code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 22.0f;
@@ -349,7 +459,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-   if (compare_raw_code_(data, CODE_COOL_22_HIGH, sizeof(CODE_COOL_22_HIGH) / sizeof(CODE_COOL_22_HIGH[0]))) {
+   if (compare_raw_code_(data, CODE_COOL_22_HIGH, sizeof(CODE_COOL_22_HIGH) / sizeof(CODE_COOL_22_HIGH[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 22 HIGH code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 22.0f;
@@ -359,7 +469,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
   }
 
  // Temp = 23 
-  if (compare_raw_code_(data, CODE_COOL_23_LOW, sizeof(CODE_COOL_23_LOW) / sizeof(CODE_COOL_23_LOW[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_23_LOW, sizeof(CODE_COOL_23_LOW) / sizeof(CODE_COOL_23_LOW[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 23 LOW code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 23.0f;
@@ -367,7 +477,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-  if (compare_raw_code_(data, CODE_COOL_23_MEDIUM, sizeof(CODE_COOL_23_MEDIUM) / sizeof(CODE_COOL_23_MEDIUM[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_23_MEDIUM, sizeof(CODE_COOL_23_MEDIUM) / sizeof(CODE_COOL_23_MEDIUM[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 23 MEDIUM code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 23.0f;
@@ -375,7 +485,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-   if (compare_raw_code_(data, CODE_COOL_23_HIGH, sizeof(CODE_COOL_23_HIGH) / sizeof(CODE_COOL_23_HIGH[0]))) {
+   if (compare_raw_code_(data, CODE_COOL_23_HIGH, sizeof(CODE_COOL_23_HIGH) / sizeof(CODE_COOL_23_HIGH[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 23 HIGH code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 23.0f;
@@ -384,7 +494,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     return true;
   }
 
-  if (compare_raw_code_(data, CODE_COOL_24_LOW, sizeof(CODE_COOL_24_LOW) / sizeof(CODE_COOL_24_LOW[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_24_LOW, sizeof(CODE_COOL_24_LOW) / sizeof(CODE_COOL_24_LOW[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 24 LOW code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 24.0f;
@@ -392,7 +502,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-  if (compare_raw_code_(data, CODE_COOL_24_MEDIUM, sizeof(CODE_COOL_24_MEDIUM) / sizeof(CODE_COOL_24_MEDIUM[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_24_MEDIUM, sizeof(CODE_COOL_24_MEDIUM) / sizeof(CODE_COOL_24_MEDIUM[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 24 MEDIUM code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 24.0f;
@@ -400,7 +510,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-   if (compare_raw_code_(data, CODE_COOL_24_HIGH, sizeof(CODE_COOL_24_HIGH) / sizeof(CODE_COOL_24_HIGH[0]))) {
+   if (compare_raw_code_(data, CODE_COOL_24_HIGH, sizeof(CODE_COOL_24_HIGH) / sizeof(CODE_COOL_24_HIGH[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 24 HIGH code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 24.0f;
@@ -409,7 +519,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     return true;
   }
 
-  if (compare_raw_code_(data, CODE_COOL_25_LOW, sizeof(CODE_COOL_25_LOW) / sizeof(CODE_COOL_25_LOW[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_25_LOW, sizeof(CODE_COOL_25_LOW) / sizeof(CODE_COOL_25_LOW[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 25 LOW code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 25.0f;
@@ -417,7 +527,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-  if (compare_raw_code_(data, CODE_COOL_25_MEDIUM, sizeof(CODE_COOL_25_MEDIUM) / sizeof(CODE_COOL_25_MEDIUM[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_25_MEDIUM, sizeof(CODE_COOL_25_MEDIUM) / sizeof(CODE_COOL_25_MEDIUM[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 25 MEDIUM code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 25.0f;
@@ -425,7 +535,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-   if (compare_raw_code_(data, CODE_COOL_25_HIGH, sizeof(CODE_COOL_25_HIGH) / sizeof(CODE_COOL_25_HIGH[0]))) {
+   if (compare_raw_code_(data, CODE_COOL_25_HIGH, sizeof(CODE_COOL_25_HIGH) / sizeof(CODE_COOL_25_HIGH[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 25 HIGH code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 25.0f;
@@ -434,7 +544,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     return true;
   }
 
-  if (compare_raw_code_(data, CODE_COOL_26_LOW, sizeof(CODE_COOL_26_LOW) / sizeof(CODE_COOL_26_LOW[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_26_LOW, sizeof(CODE_COOL_26_LOW) / sizeof(CODE_COOL_26_LOW[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 26 LOW code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 26.0f;
@@ -442,7 +552,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-  if (compare_raw_code_(data, CODE_COOL_26_MEDIUM, sizeof(CODE_COOL_26_MEDIUM) / sizeof(CODE_COOL_26_MEDIUM[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_26_MEDIUM, sizeof(CODE_COOL_26_MEDIUM) / sizeof(CODE_COOL_26_MEDIUM[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 26 MEDIUM code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 26.0f;
@@ -450,7 +560,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-   if (compare_raw_code_(data, CODE_COOL_26_HIGH, sizeof(CODE_COOL_26_HIGH) / sizeof(CODE_COOL_26_HIGH[0]))) {
+   if (compare_raw_code_(data, CODE_COOL_26_HIGH, sizeof(CODE_COOL_26_HIGH) / sizeof(CODE_COOL_26_HIGH[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 26 HIGH code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 26.0f;
@@ -459,7 +569,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     return true;
   }
 
-  if (compare_raw_code_(data, CODE_COOL_27_LOW, sizeof(CODE_COOL_27_LOW) / sizeof(CODE_COOL_27_LOW[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_27_LOW, sizeof(CODE_COOL_27_LOW) / sizeof(CODE_COOL_27_LOW[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 27 LOW code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 27.0f;
@@ -467,7 +577,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-  if (compare_raw_code_(data, CODE_COOL_27_MEDIUM, sizeof(CODE_COOL_27_MEDIUM) / sizeof(CODE_COOL_27_MEDIUM[0]))) {
+  if (compare_raw_code_(data, CODE_COOL_27_MEDIUM, sizeof(CODE_COOL_27_MEDIUM) / sizeof(CODE_COOL_27_MEDIUM[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 27 MEDIUM code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 27.0f;
@@ -475,7 +585,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
     this->publish_state();
     return true;
   }
-   if (compare_raw_code_(data, CODE_COOL_27_HIGH, sizeof(CODE_COOL_27_HIGH) / sizeof(CODE_COOL_27_HIGH[0]))) {
+   if (compare_raw_code_(data, CODE_COOL_27_HIGH, sizeof(CODE_COOL_27_HIGH) / sizeof(CODE_COOL_27_HIGH[0]), custom_tolerance)) {
     ESP_LOGD(TAG, "Matched COOL 27 HIGH code");
     this->mode = climate::CLIMATE_MODE_COOL;
     this->target_temperature = 27.0f;
@@ -485,7 +595,7 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
   }
 
   // --- If no match found ---
-  ESP_LOGV(TAG, "Received code did not match any known codes."); // Use VERBOSE level for non-matches
+  ESP_LOGD(TAG, "Received code did not match any known codes."); // Use VERBOSE level for non-matches
   return false; // Let other listeners (if any) try to handle it
 }
 
