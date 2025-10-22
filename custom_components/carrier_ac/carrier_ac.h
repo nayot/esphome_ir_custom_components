@@ -4,28 +4,30 @@
 #include "esphome/components/climate/climate.h"
 #include "esphome/components/remote_transmitter/remote_transmitter.h"
 #include "esphome/components/sensor/sensor.h"
-#include "esphome/components/remote_receiver/remote_receiver.h" // Correct include
-// includes for decoding function
+#include "esphome/components/remote_receiver/remote_receiver.h"
+// --- New Includes for Hex support ---
 #include "esphome/core/log.h"
-#include <string>       // For std::string
-#include <sstream>      // For std::stringstream (hex conversion)
-#include <iomanip>      // For std::setw and std::setfill
-#include <cstdint>      // For uint64_t
+#include <string>
+#include <vector>
+#include <sstream>
+#include <iomanip>
+#include <cstdint>
+#include <optional>
+// --- End New Includes ---
 
 namespace esphome {
 namespace carrier_ac {
 
 class CarrierACClimate : public climate::Climate, public Component,
-                         public remote_base::RemoteReceiverListener { // Correct inheritance
+                         public remote_base::RemoteReceiverListener {
  public:
-  // --- Setter functions ---
+  // --- Setter functions (Unchanged) ---
   void set_transmitter(remote_transmitter::RemoteTransmitterComponent *transmitter) {
     this->transmitter_ = transmitter;
   }
   void set_sensor(sensor::Sensor *sensor) { this->sensor_ = sensor; }
-  // --- REMOVED set_receiver ---
 
-  // --- Overridden functions ---
+  // --- Overridden functions (Unchanged)---
   climate::ClimateTraits traits() override;
   void control(const climate::ClimateCall &call) override;
   void setup() override;
@@ -34,13 +36,20 @@ class CarrierACClimate : public climate::Climate, public Component,
 
 
  protected:
-  // --- Helper Functions ---
-  void send_ir_code_();
+  // --- Helper Functions (MODIFIED) ---
+  
+  // This is our new helper function
+  void transmit_hex(uint64_t hex_data);
+  
+  // This function is still used by transmit_hex
   void transmit_raw_code_(const int32_t *data, size_t len);
-  bool compare_raw_code_(const remote_base::RemoteReceiveData &data, const int32_t *match_code, size_t match_len, int tolerance_percent = 25);
+  
+  // These are no longer needed
+  // void send_ir_code_();
+  // bool compare_raw_code_(...);
 
 
-  // --- Member Variables ---
+  // --- Member Variables (Unchanged) ---
   remote_transmitter::RemoteTransmitterComponent *transmitter_{nullptr};
   sensor::Sensor *sensor_{nullptr};
 };

@@ -1,6 +1,6 @@
 #include "carrier_ac.h"
-#include "esphome/core/log.h"
-#include <vector> // Required for sending raw codes
+// Includes are now in the .h file, but <vector> is needed here
+#include <vector> 
 
 namespace esphome {
 namespace carrier_ac {
@@ -8,74 +8,179 @@ namespace carrier_ac {
 static const char *const TAG = "carrier_ac.climate";
 
 // ======================================================================
-// ===                PASTE YOUR "CODE BOOK" HERE                     ===
+// ===               IR PROTOCOL TIMING DEFINITIONS                   ===
 // ======================================================================
-// IMPORTANT: You MUST define all the variables you use below.
-// The placeholders below WILL cause errors until you replace them.
+// (From your original file's raw codes)
+const uint32_t IR_FREQUENCY = 38000; // 38kHz
+static const int32_t HEADER_PULSE_US = 9000;
+static const int32_t HEADER_SPACE_US = -4500;
+static const int32_t PULSE_DURATION_US = 650;
+static const int32_t SPACE_ZERO_US = -500;
+static const int32_t SPACE_ONE_US = -1600;
+static const int32_t FINAL_PULSE_US = 650;
 
-const uint32_t IR_FREQUENCY = 38000; // 38kHz. Change if yours is different.
+// Tolerances for receiving
+static const int32_t SPACE_ZERO_MAX_US = 700;
+static const int32_t SPACE_ONE_MIN_US = 1300;
 
-static const int32_t CODE_OFF[] = {9273, -4389, 662, -467, 662, -467, 662, -1570, 662, -467, 662, -466, 663, -466, 663, -466, 662, -468, 661, -468, 662, -1570, 662, -466, 663, -467, 637, -1596, 661, -1569, 666, -464, 661, -468, 662, -467, 662, -466, 638, -496, 658, -467, 662, -467, 662, -467, 661, -469, 661, -466, 644, -486, 637, -492, 662, -467, 662, -468, 661, -467, 662, -470, 659, -467, 691, -439, 661, -469, 659, -468, 661, -468, 661, -469, 661, -468, 661, -467, 662, -467, 662, -468, 661, -1571, 661, -1571, 661, -468, 662, -1570, 661, -1571, 661, -468, 661, -468, 661, -1574, 632, -494, 661, -468, 661, -468, 661, -467, 661, -469, 660, -1572, 661, -1571, 661, -1572, 664, -464, 661, -468, 661, -468, 660, -469, 661, -468, 660, -469, 661, -468, 661, -468, 661}; 
-static const int32_t CODE_COOL_22_AUTO[] = {9253, -4371, 666, -460, 666, -460, 666, -1560, 666, -460, 666, -1560, 665, -461, 666, -462, 664, -460, 666, -460, 666, -1560, 694, -432, 665, -461, 665, -462, 664, -1564, 662, -1561, 692, -1535, 664, -463, 663, -462, 664, -462, 663, -461, 666, -462, 663, -464, 663, -462, 664, -462, 663, -462, 665, -462, 663, -463, 664, -462, 663, -462, 664, -464, 662, -463, 663, -464, 662, -464, 663, -463, 662, -462, 664, -463, 663, -463, 664, -460, 665, -463, 663, -464, 662, -1562, 663, -464, 690, -1537, 690, -433, 664, -1564, 662, -463, 663, -464, 663, -1561, 664, -462, 664, -464, 662, -463, 663, -463, 663, -462, 664, -1563, 664, -1561, 664, -1562, 664, -462, 664, -462, 664, -1562, 664, -1563, 663, -1564, 661, -1564, 662, -463, 663, -1568, 658};
-static const int32_t CODE_COOL_23_AUTO[] = {9278, -4348, 690, -437, 686, -439, 690, -1536, 662, -463, 663, -1563, 663, -466, 660, -465, 663, -461, 664, -462, 665, -1561, 639, -488, 663, -463, 688, -1537, 666, -461, 664, -462, 689, -436, 689, -438, 686, -441, 662, -464, 637, -488, 662, -468, 659, -463, 662, -465, 687, -441, 685, -438, 662, -464, 637, -492, 635, -489, 637, -487, 664, -465, 662, -462, 663, -464, 662, -466, 659, -464, 637, -489, 661, -468, 634, -490, 661, -464, 688, -441, 634, -490, 662, -1564, 661, -465, 661, -465, 687, -1537, 663, -1564, 663, -464, 636, -490, 661, -1565, 684, -441, 661, -464, 638, -489, 662, -464, 639, -488, 635, -1591, 636, -1588, 663, -1565, 661, -465, 636, -489, 661, -1566, 663, -1563, 636, -1588, 638, -1590, 636, -490, 660, -1566, 660};
-static const int32_t CODE_COOL_24_AUTO[] = {9254, -4373, 664, -462, 664, -463, 667, -1557, 665, -462, 664, -1563, 664, -462, 692, -434, 693, -434, 663, -462, 664, -1561, 665, -462, 664, -462, 664, -1562, 664, -463, 663, -463, 662, -1562, 665, -460, 666, -462, 664, -463, 691, -435, 662, -461, 666, -460, 666, -460, 666, -461, 664, -462, 664, -463, 690, -437, 663, -462, 664, -462, 664, -461, 665, -461, 665, -461, 665, -462, 664, -462, 664, -463, 690, -435, 664, -463, 663, -464, 663, -460, 665, -461, 665, -1562, 667, -460, 664, -461, 665, -462, 664, -1564, 662, -462, 664, -463, 663, -1563, 691, -434, 664, -461, 668, -460, 663, -464, 661, -462, 664, -1563, 664, -1562, 664, -1564, 662, -463, 663, -461, 665, -1563, 663, -1562, 664, -1563, 663, -1562, 664, -462, 664, -1563, 663};
-static const int32_t CODE_COOL_25_AUTO[] = {9278, -4346, 689, -438, 688, -437, 661, -1565, 661, -465, 661, -1566, 690, -434, 664, -464, 687, -439, 661, -464, 661, -1565, 690, -435, 691, -437, 661, -1564, 661, -464, 691, -1536, 662, -462, 691, -435, 691, -435, 663, -465, 661, -465, 688, -439, 689, -435, 662, -464, 661, -465, 662, -464, 689, -437, 662, -464, 662, -465, 688, -438, 689, -438, 660, -464, 662, -464, 662, -465, 661, -463, 663, -464, 689, -441, 658, -466, 688, -438, 688, -441, 657, -464, 662, -465, 661, -1566, 660, -1565, 662, -1563, 663, -1563, 663, -464, 661, -466, 660, -1566, 660, -466, 660, -467, 659, -464, 662, -465, 689, -437, 661, -1567, 659, -1565, 663, -1563, 661, -465, 689, -438, 660, -1566, 660, -1567, 659, -1565, 661, -1566, 660, -466, 660, -1566, 660};
-static const int32_t CODE_COOL_26_AUTO[] = {9252, -4372, 665, -462, 664, -462, 664, -1562, 664, -461, 665, -1562, 664, -462, 664, -460, 694, -434, 693, -433, 664, -1561, 665, -461, 665, -463, 663, -1562, 664, -460, 666, -1562, 664, -1562, 664, -463, 692, -432, 665, -461, 665, -461, 665, -462, 664, -461, 665, -461, 665, -461, 693, -434, 664, -463, 692, -431, 666, -462, 664, -462, 664, -462, 664, -461, 665, -465, 662, -460, 693, -435, 663, -467, 659, -460, 666, -462, 664, -461, 665, -463, 663, -462, 664, -463, 663, -1562, 664, -1563, 663, -462, 664, -1562, 691, -439, 660, -462, 664, -1563, 663, -464, 662, -461, 665, -462, 663, -462, 665, -464, 662, -1562, 666, -1562, 663, -1562, 664, -466, 659, -463, 663, -1563, 663, -1562, 664, -1563, 663, -1563, 663, -462, 664, -1563, 663};
-static const int32_t CODE_COOL_27_AUTO[] = {9253, -4374, 663, -461, 665, -460, 666, -1561, 665, -463, 663, -1560, 666, -463, 663, -462, 664, -463, 663, -460, 666, -1561, 692, -434, 692, -434, 694, -1532, 665, -1560, 666, -461, 665, -462, 664, -460, 666, -460, 665, -461, 665, -462, 665, -462, 695, -430, 665, -460, 665, -462, 665, -461, 665, -460, 666, -460, 666, -460, 666, -460, 665, -464, 689, -436, 664, -461, 665, -461, 665, -461, 664, -462, 664, -462, 664, -461, 665, -461, 665, -464, 690, -435, 663, -461, 666, -1563, 663, -461, 691, -1536, 663, -1562, 664, -461, 665, -463, 664, -1561, 665, -463, 663, -463, 662, -464, 662, -463, 663, -463, 663, -1563, 664, -1561, 665, -1562, 663, -462, 665, -461, 664, -1564, 662, -1563, 663, -1562, 664, -1564, 664, -460, 664, -1562, 664};
-static const int32_t CODE_COOL_22_LOW[] = {9287, -4348, 665, -463, 663, -463, 694, -1532, 665, -462, 665, -1563, 664, -463, 664, -463, 693, -433, 668, -458, 666, -1564, 689, -1538, 664, -1562, 665, -466, 689, -1536, 692, -1533, 666, -1562, 666, -460, 667, -461, 665, -463, 695, -432, 663, -462, 666, -461, 666, -461, 665, -467, 660, -463, 664, -463, 663, -463, 665, -462, 665, -461, 665, -467, 688, -433, 665, -465, 663, -461, 666, -461, 665, -462, 691, -436, 665, -462, 665, -464, 662, -465, 662, -463, 664, -462, 665, -1562, 666, -1564, 668, -1558, 665, -1565, 690, -440, 659, -462, 666, -1563, 664, -464, 663, -462, 669, -459, 664, -464, 662, -463, 665, -463, 663, -465, 662, -464, 664, -463, 662, -463, 664, -464, 664, -461, 665, -462, 665, -1565, 662, -1564, 664, -1564, 664};
-static const int32_t CODE_COOL_23_LOW[] = {9286, -4351, 660, -466, 661, -467, 659, -1569, 659, -466, 689, -1538, 689, -439, 688, -438, 690, -438, 688, -439, 689, -1539, 687, -1539, 661, -1568, 661, -1565, 661, -467, 660, -465, 688, -441, 687, -439, 660, -468, 659, -468, 659, -467, 660, -467, 688, -439, 687, -440, 688, -439, 659, -467, 659, -468, 687, -439, 689, -438, 688, -438, 689, -438, 661, -467, 659, -467, 661, -466, 688, -440, 660, -466, 660, -467, 660, -468, 659, -467, 660, -467, 688, -439, 687, -440, 659, -1569, 660, -1567, 661, -467, 659, -1569, 685, -440, 687, -444, 684, -1541, 659, -465, 689, -439, 660, -467, 659, -467, 664, -465, 687, -439, 687, -440, 659, -466, 661, -467, 660, -467, 661, -465, 661, -465, 662, -465, 688, -1546, 654, -1569, 687, -1541, 659};
-static const int32_t CODE_COOL_24_LOW[] = {9259, -4377, 663, -467, 660, -464, 693, -1533, 664, -462, 692, -1538, 662, -465, 662, -463, 664, -462, 665, -462, 665, -1563, 692, -1535, 665, -1565, 662, -1564, 664, -464, 691, -434, 669, -1560, 663, -463, 664, -462, 665, -461, 692, -437, 663, -464, 690, -437, 663, -462, 665, -461, 693, -436, 663, -465, 662, -464, 663, -464, 662, -462, 665, -463, 665, -463, 663, -464, 691, -436, 663, -461, 666, -462, 665, -462, 665, -461, 665, -464, 690, -437, 662, -464, 663, -463, 664, -1565, 663, -463, 664, -1565, 662, -1566, 663, -463, 663, -463, 664, -1566, 661, -466, 662, -465, 662, -464, 663, -463, 663, -465, 690, -436, 663, -463, 663, -464, 664, -462, 664, -462, 665, -463, 664, -463, 663, -464, 663, -1566, 662, -1564, 663, -1565, 664};
-static const int32_t CODE_COOL_25_LOW[] = {9256, -4377, 663, -463, 664, -465, 662, -1565, 692, -436, 662, -1565, 663, -463, 692, -438, 660, -465, 691, -435, 662, -1566, 662, -1566, 692, -1536, 690, -1536, 662, -465, 663, -1566, 661, -467, 688, -435, 691, -436, 690, -437, 663, -465, 662, -465, 661, -467, 660, -465, 662, -464, 662, -468, 660, -465, 662, -465, 661, -466, 661, -465, 662, -465, 690, -438, 660, -466, 661, -466, 661, -464, 663, -465, 662, -464, 663, -463, 663, -466, 661, -464, 663, -465, 662, -465, 662, -1566, 661, -466, 661, -466, 661, -1566, 662, -467, 688, -437, 661, -1566, 690, -436, 691, -436, 663, -464, 665, -463, 661, -464, 689, -440, 663, -463, 661, -464, 663, -466, 660, -466, 661, -467, 660, -467, 660, -465, 662, -1567, 660, -1567, 661, -1568, 660};
-static const int32_t CODE_COOL_26_LOW[] = {9255, -4380, 689, -437, 662, -463, 663, -1565, 663, -464, 663, -1566, 690, -436, 692, -436, 661, -465, 690, -438, 690, -1539, 688, -1563, 636, -1565, 693, -1535, 663, -468, 658, -1565, 662, -1566, 691, -436, 690, -437, 689, -437, 691, -437, 688, -439, 689, -438, 660, -467, 660, -465, 663, -465, 661, -466, 660, -467, 660, -467, 661, -464, 662, -465, 662, -465, 690, -438, 689, -438, 661, -465, 691, -435, 692, -435, 662, -467, 660, -467, 692, -434, 661, -467, 659, -465, 662, -466, 690, -1538, 661, -1568, 660, -1566, 637, -491, 660, -465, 662, -1568, 660, -465, 661, -467, 660, -466, 688, -440, 688, -438, 660, -465, 662, -465, 662, -465, 662, -466, 660, -466, 690, -437, 661, -467, 660, -466, 661, -1567, 661, -1567, 660, -1567, 662};
-static const int32_t CODE_COOL_27_LOW[] = {9257, -4378, 663, -464, 663, -464, 663, -1565, 691, -435, 692, -1537, 688, -438, 663, -464, 688, -440, 661, -465, 691, -1537, 662, -1565, 689, -1538, 662, -1565, 663, -1566, 662, -464, 689, -437, 664, -464, 663, -462, 693, -436, 661, -466, 661, -464, 663, -464, 663, -463, 664, -465, 661, -466, 662, -465, 661, -466, 661, -465, 662, -465, 690, -438, 661, -464, 662, -466, 662, -463, 664, -463, 663, -464, 664, -463, 663, -464, 663, -463, 664, -464, 662, -466, 662, -464, 662, -466, 661, -1566, 662, -464, 662, -1568, 660, -464, 663, -464, 663, -1566, 662, -464, 694, -433, 662, -467, 660, -465, 692, -435, 661, -467, 661, -463, 663, -466, 661, -467, 660, -466, 661, -466, 661, -467, 660, -463, 664, -1564, 663, -1564, 692, -1539, 661};
-static const int32_t CODE_COOL_22_MEDIUM[] = {9290, -4346, 691, -437, 661, -465, 691, -1537, 690, -436, 662, -1565, 689, -438, 663, -464, 689, -437, 691, -438, 687, -1539, 689, -1538, 695, -433, 661, -467, 659, -1566, 691, -1536, 663, -1565, 663, -464, 662, -466, 661, -465, 662, -465, 662, -465, 690, -437, 662, -465, 689, -439, 689, -435, 663, -465, 691, -437, 660, -466, 692, -434, 662, -467, 660, -464, 663, -464, 663, -465, 690, -437, 661, -466, 688, -440, 688, -437, 693, -433, 691, -439, 658, -465, 662, -1568, 663, -463, 661, -465, 690, -437, 690, -1539, 661, -464, 662, -467, 689, -1539, 688, -437, 662, -466, 660, -466, 688, -438, 662, -465, 688, -438, 662, -464, 663, -1566, 661, -466, 661, -466, 691, -434, 663, -467, 660, -464, 693, -1537, 660, -1571, 686, -437, 661};
-static const int32_t CODE_COOL_23_MEDIUM[] = {9282, -4351, 662, -464, 663, -466, 689, -1537, 662, -465, 662, -1565, 691, -437, 661, -465, 690, -438, 660, -464, 664, -1565, 691, -1536, 663, -467, 660, -1564, 663, -465, 665, -461, 663, -465, 689, -438, 661, -464, 690, -438, 688, -439, 689, -437, 691, -437, 688, -439, 689, -436, 662, -465, 662, -464, 662, -467, 660, -467, 660, -467, 660, -466, 688, -439, 661, -465, 690, -437, 661, -465, 662, -465, 688, -439, 662, -464, 662, -467, 660, -466, 661, -470, 657, -464, 663, -1565, 662, -1568, 660, -1566, 663, -1566, 688, -437, 661, -466, 661, -1568, 660, -465, 662, -465, 662, -466, 687, -438, 662, -466, 661, -465, 662, -465, 688, -1540, 661, -464, 663, -464, 662, -465, 662, -466, 660, -467, 661, -1566, 661, -1567, 660, -468, 659};
-static const int32_t CODE_COOL_24_MEDIUM[] = {9285, -4350, 687, -439, 690, -436, 662, -1567, 660, -464, 664, -1565, 691, -436, 662, -465, 691, -436, 661, -465, 691, -1537, 690, -1537, 661, -465, 690, -1540, 689, -437, 661, -464, 692, -1537, 690, -437, 689, -437, 690, -437, 661, -467, 659, -467, 660, -467, 660, -467, 660, -465, 663, -464, 689, -438, 690, -437, 637, -490, 690, -435, 692, -435, 690, -437, 662, -467, 689, -437, 661, -465, 662, -464, 662, -465, 661, -467, 661, -466, 661, -466, 660, -466, 689, -437, 688, -1539, 663, -1567, 688, -437, 662, -1567, 661, -464, 690, -438, 688, -1539, 689, -439, 692, -433, 661, -467, 660, -466, 661, -466, 661, -467, 688, -438, 689, -1539, 688, -438, 689, -437, 661, -465, 688, -439, 662, -465, 662, -1565, 662, -1566, 662, -466, 661};
-static const int32_t CODE_COOL_25_MEDIUM[] = {9256, -4377, 663, -464, 663, -466, 661, -1565, 691, -436, 662, -1565, 691, -442, 656, -465, 693, -434, 690, -439, 688, -1538, 661, -1565, 663, -464, 662, -1566, 662, -465, 690, -1538, 661, -466, 661, -465, 691, -437, 689, -437, 661, -466, 661, -464, 663, -465, 691, -436, 691, -436, 690, -436, 661, -468, 660, -464, 663, -465, 690, -438, 660, -465, 661, -467, 661, -466, 661, -465, 662, -464, 689, -438, 661, -465, 663, -464, 689, -439, 690, -437, 688, -438, 661, -467, 660, -1567, 689, -438, 661, -1567, 661, -1567, 689, -437, 661, -467, 661, -1565, 690, -441, 659, -464, 663, -465, 689, -438, 660, -467, 689, -437, 661, -466, 661, -1566, 689, -441, 658, -465, 688, -440, 660, -468, 659, -465, 692, -1536, 663, -1566, 660, -465, 661};
-static const int32_t CODE_COOL_26_MEDIUM[] = {9256, -4380, 690, -434, 663, -464, 663, -1564, 692, -435, 691, -1537, 689, -438, 662, -465, 690, -438, 690, -435, 662, -1567, 662, -1563, 692, -436, 662, -1566, 689, -438, 690, -1536, 662, -1566, 691, -435, 691, -438, 661, -465, 661, -468, 659, -465, 693, -435, 689, -438, 660, -465, 662, -466, 661, -465, 661, -464, 663, -467, 690, -435, 662, -464, 663, -464, 662, -465, 691, -436, 662, -465, 661, -466, 661, -465, 689, -438, 689, -439, 636, -490, 661, -464, 662, -468, 685, -1541, 661, -465, 661, -466, 690, -1537, 688, -439, 690, -437, 689, -1541, 685, -438, 692, -434, 691, -439, 659, -465, 663, -465, 689, -440, 658, -466, 661, -1565, 663, -464, 689, -437, 663, -465, 661, -466, 689, -439, 688, -1538, 661, -1567, 661, -466, 660};
-static const int32_t CODE_COOL_27_MEDIUM[] = {9256, -4378, 663, -463, 692, -437, 661, -1565, 690, -438, 661, -1565, 663, -465, 690, -437, 690, -436, 662, -464, 690, -1539, 665, -1563, 689, -436, 661, -1567, 661, -1567, 661, -466, 663, -464, 661, -466, 687, -439, 662, -464, 690, -437, 661, -466, 690, -436, 690, -436, 662, -466, 661, -465, 690, -437, 662, -464, 663, -464, 662, -466, 689, -438, 690, -437, 661, -464, 663, -464, 662, -465, 662, -464, 662, -467, 660, -465, 662, -465, 662, -465, 680, -446, 662, -466, 661, -467, 660, -1566, 661, -1567, 689, -1539, 661, -464, 662, -466, 660, -1567, 688, -438, 662, -464, 662, -465, 662, -467, 688, -438, 688, -438, 661, -467, 660, -1565, 662, -466, 661, -467, 660, -465, 691, -437, 660, -467, 688, -1539, 692, -1536, 662, -463, 662};
-static const int32_t CODE_COOL_22_HIGH[] = {9233, -4400, 639, -490, 690, -436, 687, -1541, 662, -464, 687, -1539, 689, -441, 637, -489, 685, -442, 662, -463, 664, -1565, 637, -490, 687, -1539, 663, -463, 664, -1565, 663, -1565, 637, -1590, 662, -463, 663, -464, 665, -463, 686, -441, 638, -492, 658, -466, 661, -466, 661, -467, 660, -464, 638, -489, 639, -487, 664, -464, 688, -439, 662, -464, 638, -489, 637, -490, 637, -490, 661, -465, 638, -490, 637, -489, 663, -463, 663, -464, 663, -463, 638, -489, 638, -1591, 663, -463, 638, -489, 662, -1566, 661, -1565, 639, -489, 637, -490, 638, -1589, 662, -466, 662, -464, 689, -439, 636, -491, 683, -443, 637, -491, 636, -1591, 660, -467, 662, -464, 688, -440, 636, -490, 661, -464, 638, -491, 660, -1566, 663, -464, 638, -1590, 663};
-static const int32_t CODE_COOL_23_HIGH[] = {9283, -4351, 691, -437, 685, -441, 688, -1540, 661, -468, 659, -1566, 637, -490, 638, -487, 664, -464, 663, -463, 639, -1589, 638, -489, 638, -1590, 689, -1538, 689, -442, 686, -437, 662, -465, 689, -439, 661, -465, 663, -463, 639, -490, 636, -490, 637, -488, 663, -464, 665, -462, 639, -489, 637, -490, 637, -490, 637, -490, 687, -439, 663, -467, 682, -442, 637, -489, 638, -490, 662, -463, 639, -488, 663, -464, 638, -489, 638, -489, 662, -464, 664, -465, 636, -1591, 638, -488, 638, -489, 662, -464, 638, -1592, 638, -489, 636, -489, 663, -1566, 662, -466, 661, -467, 659, -467, 661, -464, 638, -492, 634, -490, 661, -1567, 637, -491, 661, -466, 661, -466, 661, -466, 661, -465, 637, -489, 663, -1565, 661, -467, 637, -1595, 633};
-static const int32_t CODE_COOL_24_HIGH[] = {9258, -4377, 662, -464, 664, -463, 664, -1564, 691, -437, 689, -1538, 690, -437, 688, -439, 691, -435, 662, -464, 663, -1566, 662, -464, 663, -1565, 662, -1566, 661, -463, 664, -464, 663, -1565, 663, -463, 664, -464, 663, -462, 640, -489, 690, -435, 663, -465, 663, -468, 659, -463, 662, -466, 637, -489, 638, -489, 662, -465, 690, -441, 686, -437, 637, -489, 662, -465, 638, -489, 692, -434, 690, -438, 688, -437, 693, -436, 662, -465, 662, -464, 692, -436, 636, -489, 662, -1565, 690, -1539, 662, -1565, 689, -1538, 663, -465, 661, -464, 638, -1591, 661, -466, 662, -464, 661, -465, 663, -464, 688, -440, 688, -439, 688, -1540, 662, -465, 661, -465, 688, -438, 665, -462, 662, -466, 636, -491, 636, -1591, 662, -464, 663, -1566, 661};
-static const int32_t CODE_COOL_25_HIGH[] = {9286, -4349, 639, -489, 690, -436, 691, -1538, 662, -463, 692, -1535, 689, -440, 691, -436, 690, -437, 662, -463, 690, -1539, 661, -465, 689, -1538, 663, -1565, 638, -489, 689, -1540, 637, -489, 661, -466, 690, -437, 689, -438, 637, -489, 662, -464, 639, -489, 690, -436, 690, -437, 693, -434, 638, -490, 662, -463, 663, -465, 689, -438, 637, -488, 638, -490, 662, -464, 663, -464, 662, -466, 688, -438, 661, -464, 663, -465, 689, -439, 686, -441, 688, -438, 661, -466, 637, -1589, 663, -1567, 637, -493, 658, -1567, 661, -465, 638, -490, 660, -1566, 638, -489, 664, -463, 689, -439, 636, -488, 639, -490, 660, -467, 661, -1566, 688, -439, 637, -491, 661, -465, 637, -488, 662, -466, 662, -464, 638, -1591, 637, -490, 637, -1593, 659};
-static const int32_t CODE_COOL_26_HIGH[] = {9258, -4378, 690, -439, 688, -435, 694, -1534, 691, -437, 689, -1537, 691, -438, 689, -437, 661, -465, 663, -465, 662, -1565, 662, -463, 664, -1564, 663, -1566, 662, -465, 662, -1565, 638, -1591, 690, -435, 662, -465, 664, -467, 659, -464, 687, -441, 637, -493, 634, -489, 638, -489, 690, -441, 684, -439, 637, -489, 661, -465, 639, -490, 688, -437, 689, -438, 689, -437, 691, -437, 663, -463, 663, -465, 690, -437, 661, -465, 638, -490, 661, -466, 661, -466, 660, -466, 662, -1566, 688, -438, 690, -1539, 661, -1565, 662, -466, 661, -465, 662, -1566, 689, -437, 662, -463, 664, -463, 663, -465, 662, -464, 663, -464, 663, -1565, 662, -467, 661, -462, 665, -463, 664, -463, 663, -464, 663, -463, 664, -1565, 663, -464, 663, -1565, 662};
-static const int32_t CODE_COOL_27_HIGH[] = {9287, -4348, 642, -486, 638, -488, 638, -1591, 637, -489, 690, -1538, 660, -467, 661, -465, 690, -437, 687, -440, 638, -1589, 690, -436, 642, -1585, 687, -1541, 691, -1537, 664, -464, 689, -438, 689, -437, 638, -490, 661, -465, 662, -465, 662, -464, 639, -490, 636, -490, 661, -464, 663, -464, 663, -463, 639, -489, 638, -489, 638, -489, 637, -490, 688, -439, 689, -438, 637, -488, 639, -488, 638, -489, 664, -462, 664, -463, 664, -463, 638, -490, 662, -464, 663, -465, 685, -1546, 634, -490, 662, -463, 664, -1565, 661, -466, 637, -489, 637, -1591, 637, -490, 637, -490, 661, -465, 660, -467, 661, -466, 662, -463, 642, -1588, 636, -490, 661, -465, 638, -490, 661, -467, 660, -466, 661, -466, 661, -1566, 637, -490, 662, -1566, 661};
-static const int32_t CODE_FAN_LOW[] = {9284, -4349, 661, -466, 661, -465, 691, -1536, 662, -467, 686, -1540, 691, -436, 661, -467, 690, -436, 660, -466, 661, -466, 688, -1541, 659, -1568, 687, -1540, 661, -464, 662, -466, 688, -1540, 689, -438, 660, -466, 660, -467, 660, -466, 688, -438, 661, -466, 662, -466, 689, -438, 688, -439, 688, -437, 690, -437, 690, -437, 690, -437, 660, -465, 662, -466, 661, -468, 686, -440, 688, -438, 660, -468, 685, -440, 661, -467, 660, -467, 687, -439, 689, -438, 659, -1569, 688, -438, 660, -465, 688, -1541, 660, -1568, 635, -491, 660, -465, 688, -1542, 660, -465, 688, -438, 689, -438, 689, -438, 663, -464, 661, -465, 688, -441, 660, -466, 688, -439, 659, -467, 661, -466, 660, -467, 660, -466, 637, -1592, 687, -1540, 660, -1568, 660};
-static const int32_t CODE_FAN_MEDIUM[] = {9257, -4383, 658, -464, 692, -436, 691, -1536, 661, -464, 662, -1566, 662, -465, 663, -463, 663, -464, 663, -464, 690, -438, 661, -1567, 661, -467, 686, -1540, 661, -466, 690, -437, 661, -1566, 661, -467, 689, -436, 662, -466, 661, -466, 660, -466, 661, -464, 663, -465, 662, -464, 663, -465, 692, -434, 662, -466, 689, -436, 691, -436, 689, -442, 657, -467, 690, -437, 661, -466, 660, -465, 662, -464, 662, -467, 660, -466, 661, -466, 660, -467, 689, -437, 661, -1566, 662, -465, 689, -1538, 662, -467, 688, -1537, 690, -441, 658, -466, 660, -1568, 688, -437, 661, -464, 663, -464, 666, -461, 662, -465, 661, -467, 661, -464, 663, -1565, 662, -466, 688, -437, 690, -437, 690, -437, 661, -467, 660, -1569, 659, -1568, 687, -439, 660};
-static const int32_t CODE_FAN_HIGH[] = {9284, -4351, 689, -437, 661, -465, 661, -1569, 660, -465, 688, -1539, 689, -439, 687, -438, 688, -439, 690, -438, 689, -438, 688, -439, 660, -1571, 685, -1563, 637, -464, 661, -467, 661, -1571, 683, -440, 660, -465, 689, -438, 688, -438, 690, -437, 661, -467, 661, -465, 689, -440, 688, -438, 688, -438, 660, -467, 660, -467, 660, -466, 661, -465, 637, -491, 636, -490, 661, -467, 687, -439, 661, -466, 689, -437, 689, -438, 689, -438, 660, -467, 688, -439, 685, -1543, 688, -441, 684, -1541, 660, -1567, 659, -1568, 661, -467, 687, -440, 688, -1540, 659, -467, 661, -466, 660, -466, 689, -438, 660, -467, 687, -440, 689, -1538, 660, -468, 660, -466, 661, -466, 660, -466, 688, -440, 686, -440, 688, -1540, 688, -439, 660, -1568, 659};
-
-
-const size_t RAW_CODE_LENGTH = sizeof(CODE_OFF) / sizeof(CODE_OFF[0]);
 
 // ======================================================================
+// ===                PASTE YOUR HEX "CODE BOOK" HERE                 ===
+// ======================================================================
+// Use 'ULL' (Unsigned Long Long) for 64-bit constants.
+// 
+// TODO: You MUST define all the hex codes for the commands you are
+// using in the 'control' function below.
+//
+// Example:
+static const uint64_t CODE_OFF                 = 0x2049000000090700ULL; 
+static const uint64_t CODE_COOL_22_AUTO = 0x2847000000a90700ULL;
+static const uint64_t CODE_COOL_23_AUTO = 0x2848000000990700ULL;
+static const uint64_t CODE_COOL_24_AUTO = 0x2849000000890700ULL;
+static const uint64_t CODE_COOL_25_AUTO = 0x284a000000790700ULL;
+static const uint64_t CODE_COOL_26_AUTO = 0x284b000000690700ULL;
+static const uint64_t CODE_COOL_27_AUTO = 0x284c000000590700ULL;
+static const uint64_t CODE_COOL_22_LOW = 0x2877000000790007ULL;
+static const uint64_t CODE_COOL_23_LOW = 0x2878000000690007ULL;
+static const uint64_t CODE_COOL_24_LOW = 0x2879000000590007ULL;
+static const uint64_t CODE_COOL_25_LOW = 0x287a000000490007ULL;
+static const uint64_t CODE_COOL_26_LOW = 0x287b000000390007ULL;
+static const uint64_t CODE_COOL_27_LOW = 0x287c000000290007ULL;
+static const uint64_t CODE_COOL_22_MEDIUM = 0x2869000000690106ULL;
+static const uint64_t CODE_COOL_23_MEDIUM = 0x2868000000790106ULL;
+static const uint64_t CODE_COOL_24_MEDIUM = 0x2869000000690106ULL;
+static const uint64_t CODE_COOL_25_MEDIUM = 0x286a000000590106ULL;
+static const uint64_t CODE_COOL_26_MEDIUM = 0x286b000000490106ULL;
+static const uint64_t CODE_COOL_27_MEDIUM = 0x286c000000390106ULL;
+static const uint64_t CODE_COOL_22_HIGH = 0x2857000000990205ULL;
+static const uint64_t CODE_COOL_23_HIGH = 0x2858000000890205ULL;
+static const uint64_t CODE_COOL_24_HIGH = 0x2859000000790205ULL;
+static const uint64_t CODE_COOL_25_HIGH = 0x285a000000690205ULL;
+static const uint64_t CODE_COOL_26_HIGH = 0x285b000000590205ULL;
+static const uint64_t CODE_COOL_27_HIGH = 0x285c000000490205ULL;
+static const uint64_t CODE_FAN_ONLY_LOW = 0x2839000000990007ULL;
+static const uint64_t CODE_FAN_ONLY_MEDIUM = 0x2829000000a90106ULL;
+static const uint64_t CODE_FAN_ONLY_HIGH = 0x2819000000b90205ULL;
 
-// --- Standard Setup and Dump Functions (Restored) ---
+// ======================================================================
+// ===                NEW ENCODER / DECODER FUNCTIONS                 ===
+// ======================================================================
+
+/**
+ * @brief Decodes raw IR timings into a 64-bit integer.
+ */
+static std::optional<uint64_t> decode_to_uint64(remote_base::RemoteReceiveData data) {
+  if (data.size() < 131) {
+    return std::nullopt;
+  }
+
+  uint64_t decoded_data = 0;
+  int bit_count = 0;
+
+  for (size_t i = 2; i < data.size() - 1 && bit_count < 64; i += 2) {
+    int32_t space_duration = std::abs(data[i + 1]);
+    decoded_data <<= 1;
+
+    if (space_duration >= SPACE_ONE_MIN_US) {
+      decoded_data |= 1;
+    } else if (space_duration < SPACE_ZERO_MAX_US) {
+      // It's a '0' bit.
+    } else {
+      ESP_LOGW(TAG, "Ambiguous space timing at index %d: %d", (int)i + 1, space_duration);
+      return std::nullopt;
+    }
+    bit_count++;
+  }
+
+  if (bit_count == 64) {
+    return decoded_data;
+  }
+  return std::nullopt;
+}
+
+/**
+ * @brief Encodes a 64-bit hex code into a raw IR timing vector.
+ */
+static std::vector<int32_t> encode_hex_to_raw(uint64_t hex_data) {
+  std::vector<int32_t> raw_data;
+  raw_data.reserve(131);
+
+  raw_data.push_back(HEADER_PULSE_US);
+  raw_data.push_back(HEADER_SPACE_US);
+
+  for (int i = 63; i >= 0; i--) {
+    raw_data.push_back(PULSE_DURATION_US);
+    if ((hex_data >> i) & 1) {
+      raw_data.push_back(SPACE_ONE_US);
+    } else {
+      raw_data.push_back(SPACE_ZERO_US);
+    }
+  }
+  
+  raw_data.push_back(FINAL_PULSE_US);
+  return raw_data;
+}
+
+
+// ======================================================================
+// ===                CLIMATE COMPONENT FUNCTIONS                     ===
+// ======================================================================
+
+// --- setup() and dump_config() from your original file ---
 void CarrierACClimate::setup() {
-  if (this->sensor_) {
-    this->sensor_->add_on_state_callback([this](float state) {
-      this->current_temperature = state;
-      this->publish_state();
-    });
-    this->current_temperature = this->sensor_->state;
-  } else {
-    this->current_temperature = NAN;
-  }
+  // If you use a sensor, restore this logic
+  // if (this->sensor_ != nullptr) {
+  //   this->sensor_->add_on_state_callback([this](float state) {
+  //     this->current_temperature = state;
+  //     this->publish_state();
+  //   });
+  //   this->current_temperature = this->sensor_->state;
+  // } else {
+  //   this->current_temperature = NAN;
+  // }
 
-  auto restore = this->restore_state_();
-  if (restore.has_value()) {
-    restore->apply(this);
-  } else {
-    this->mode = climate::CLIMATE_MODE_OFF;
-    this->target_temperature = 24;
-    this->fan_mode = climate::CLIMATE_FAN_AUTO;
-  }
+  // If you use a receiver, you must register the listener
+  // if (this->receiver_ != nullptr) {
+  //   this->receiver_->add_listener(this);
+  // }
 }
 
 void CarrierACClimate::dump_config() {
-  ESP_LOGCONFIG(TAG, "Carrier AC Climate Component");
+  ESP_LOGCONFIG(TAG, "Carrier AC Climate:");
+  LOG_CLIMATE("", "Carrier AC", this);
 }
 
-// --- Helper function to send the raw code (Restored) ---
+
+climate::ClimateTraits CarrierACClimate::traits() {
+  auto traits = climate::ClimateTraits();
+  traits.set_supports_current_temperature(false);
+  
+  traits.set_supported_modes({
+      climate::CLIMATE_MODE_OFF,
+      climate::CLIMATE_MODE_COOL,
+      climate::CLIMATE_MODE_FAN_ONLY,
+  });
+  
+  traits.set_supported_fan_modes({
+      climate::CLIMATE_FAN_AUTO,
+      climate::CLIMATE_FAN_LOW,
+      climate::CLIMATE_FAN_MEDIUM,
+      climate::CLIMATE_FAN_HIGH,
+  });
+  // traits.set_supported_swing_modes({
+  //     // climate::CLIMATE_SWING_VERTICAL,
+  // });
+  traits.set_visual_min_temperature(22.0f);
+  traits.set_visual_max_temperature(27.0f);
+  traits.set_visual_temperature_step(1.0f);
+  return traits;
+}
+
+
+// ======================================================================
+// ===                TRANSMITTER FUNCTIONS (MODIFIED)                ===
+// ======================================================================
+
 void CarrierACClimate::transmit_raw_code_(const int32_t *data, size_t len) {
   if (this->transmitter_ == nullptr) {
     ESP_LOGE(TAG, "Transmitter not set up!");
@@ -94,510 +199,207 @@ void CarrierACClimate::transmit_raw_code_(const int32_t *data, size_t len) {
   call.perform();
 }
 
-// --- Define component features (Restored) ---
-climate::ClimateTraits CarrierACClimate::traits() {
-  auto traits = climate::ClimateTraits();
-  traits.set_supports_current_temperature(this->sensor_ != nullptr);
-
-  traits.set_supported_modes({
-      climate::CLIMATE_MODE_OFF,
-      climate::CLIMATE_MODE_COOL,
-      climate::CLIMATE_MODE_FAN_ONLY
-  });
-
-  traits.set_supported_fan_modes({
-      climate::CLIMATE_FAN_LOW,
-      climate::CLIMATE_FAN_MEDIUM,
-      climate::CLIMATE_FAN_HIGH,
-      climate::CLIMATE_FAN_AUTO
-  });
-
-  traits.set_visual_min_temperature(22.0f);
-  traits.set_visual_max_temperature(27.0f);
-  traits.set_visual_temperature_step(1.0f);
-
-  return traits;
-}
-
-// --- BEGIN NEW DECODER FUNCTION ---
-
-// Define the timing thresholds (in microseconds)
-// A "space" (negative value) shorter than this is a '0'
-static const int32_t SPACE_ZERO_MAX_US = 700;
-// A "space" longer than this is a '1'
-static const int32_t SPACE_ONE_MIN_US = 1300;
 
 /**
- * @brief Decodes raw IR timings into a 64-bit hexadecimal string.
- * * Assumes Carrier/Midea protocol: Header + 64 data bits.
- * The bit value is determined by the duration of the SPACE.
- *
- * @param data The raw timing data from the IR receiver.
- * @return A std::string containing the 16-character hex code (e.g., "A1B2C3D4E5F6A7B8")
- * or an error message.
+ * @brief This is our NEW hex helper function.
+ * It converts hex to raw, then calls your working transmit_raw_code_ function.
  */
-std::string decode_to_hex(remote_base::RemoteReceiveData data) {
-  // A full 64-bit signal has 1 header pair, 64 data pairs, and 1 final pulse.
-  // 1 (pulse) + 1 (space) + 64*2 (pulse+space) + 1 (pulse) = 131
-  if (data.size() < 131) {
-    return "Error: Invalid length. Received " + std::to_string(data.size()) + " elements.";
-  }
-
-  uint64_t decoded_data = 0; // 64-bit integer to hold our bits
-  int bit_count = 0;
-
-  // Start at index 2 (skipping the header pulse and space)
-  // Iterate by 2 (pulse + space) for each bit
-  // Stop before the last pulse and once we have 64 bits
-  for (size_t i = 2; i < data.size() - 1 && bit_count < 64; i += 2) {
-    // The bit value is in the SPACE timing (the negative number)
-    int32_t space_duration = std::abs(data[i + 1]);
-
-    // Shift our 64-bit integer to the left to make room for the new bit
-    decoded_data <<= 1;
-
-    if (space_duration >= SPACE_ONE_MIN_US) {
-      // It's a '1' bit. Set the last bit.
-      decoded_data |= 1;
-    } else if (space_duration < SPACE_ZERO_MAX_US) {
-      // It's a '0' bit. We already shifted, so the last bit is 0.
-      // Do nothing.
-    } else {
-      // Ambiguous timing
-      return "Error: Ambiguous space timing at index " + std::to_string(i + 1) + 
-             " (" + std::to_string(space_duration) + "us)";
-    }
-    bit_count++;
-  }
-
-  if (bit_count < 64) {
-    return "Error: Decoded only " + std::to_string(bit_count) + " bits.";
-  }
-
-  // Convert the 64-bit integer to a 16-character hex string
-  std::stringstream ss;
-  ss << std::hex << std::setfill('0') << std::setw(16) << decoded_data;
-  return ss.str();
+void CarrierACClimate::transmit_hex(uint64_t hex_data) {
+  std::vector<int32_t> raw_vector = encode_hex_to_raw(hex_data);
+  // Call your original, working function with the new data
+  this->transmit_raw_code_(raw_vector.data(), raw_vector.size());
 }
 
-// --- END NEW DECODER FUNCTION ---
-
-// Helper function to compare received timings with stored codes
-bool CarrierACClimate::compare_raw_code_(const remote_base::RemoteReceiveData &data, const int32_t *match_code, size_t match_len, int tolerance_percent) {
-    // if (!data.is_raw()) {
-    //     // We only handle raw codes
-    //     return false;
-    // }
-
-    size_t received_len = data.size();
-
-    // --- ADD DETAILED LOGGING ---
-    ESP_LOGV(TAG, "Compare Check: Received size=%d, Expected size=%d", data.size(), match_len);
-    // --- END LOGGING ---
-
-    if (received_len > 0 && data[received_len - 1] < -5000) { 
-      // If a terminator is present, reduce the effective length for comparison by 1.
-      received_len--;
-      ESP_LOGV(TAG, "Removed final terminator pulse/space. Effective size: %zu", received_len);
-    }
-
-    if (received_len != match_len) {
-        // Different number of pulses/spaces
-        ESP_LOGV(TAG, "Different number of pulses/spaces");
-        return false;
-    }
-    // --- ADD SUCCESS LOG ---  
-    ESP_LOGV(TAG, "Compare Success: Sizes match, proceeding with tolerance check.");
-    // --- END LOGGING ---
-
-    // Convert percentage tolerance to microseconds range
-    int32_t tolerance_us_low = 100 - tolerance_percent;
-    int32_t tolerance_us_high = 100 + tolerance_percent;
-
-    for (size_t i = 0; i < match_len; i++) {
-        // Calculate the allowed range for the current timing value
-        int32_t expected = match_code[i];
-        int32_t actual = data.get_raw_data()[i]; // ESPHome stores raw data directly
-
-        // Need absolute values for comparison range calculation
-        int32_t lower_bound = (abs(expected) * tolerance_us_low) / 100;
-        int32_t upper_bound = (abs(expected) * tolerance_us_high) / 100;
-
-        // Check if the signs match (both mark or both space)
-        if ((expected > 0 && actual < 0) || (expected < 0 && actual > 0)) {
-            return false; // Sign mismatch
-        }
-
-        // Check if the absolute value is within the tolerance range
-        if (abs(actual) < lower_bound || abs(actual) > upper_bound) {
-            // Timing mismatch
-            // Optional: Log the mismatch for debugging
-            // ESP_LOGVV(TAG, "Timing mismatch at index %d: Expected %d, Got %d (Range %d-%d)", i, expected, actual, lower_bound, upper_bound);
-            return false;
-        }
-    }
-    // If we get here, all timings matched within tolerance
-    return true;
-}
-
-// --- Main control function (Restored) ---
+/**
+ * @brief Transmit a command to the AC.
+ * This is now updated to call transmit_hex().
+ */
 void CarrierACClimate::control(const climate::ClimateCall &call) {
-  if (call.get_mode().has_value())
+  // Update internal state from the call
+  if (call.get_mode().has_value()) {
     this->mode = *call.get_mode();
-  if (call.get_target_temperature().has_value())
+  }
+  if (call.get_target_temperature().has_value()) {
     this->target_temperature = *call.get_target_temperature();
-  if (call.get_fan_mode().has_value())
+  }
+  if (call.get_fan_mode().has_value()) {
     this->fan_mode = *call.get_fan_mode();
+  }
 
-  this->publish_state();
-  this->send_ir_code_(); // Call the function to send the code
-}
-
-void CarrierACClimate::send_ir_code_() {
-  const int32_t *code_to_send = nullptr;
-  size_t code_len = 0;
-
-  // --- 1. Check for OFF state ---
+  // Call new helper function
   if (this->mode == climate::CLIMATE_MODE_OFF) {
-    ESP_LOGD(TAG, "Sending OFF code");
-    code_to_send = CODE_OFF; // Make sure CODE_OFF is defined above!
-    // Check if CODE_OFF is actually defined before calculating size
-    if (code_to_send != nullptr) {
-        code_len = sizeof(CODE_OFF) / sizeof(CODE_OFF[0]);
-    }
+    this->transmit_hex(CODE_OFF);
+  } 
+  // --- AUTO FAN ---
+  else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 22.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
+    this->transmit_hex(CODE_COOL_22_AUTO);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 23.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
+    this->transmit_hex(CODE_COOL_23_AUTO);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 24.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
+    this->transmit_hex(CODE_COOL_24_AUTO);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 25.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
+    this->transmit_hex(CODE_COOL_25_AUTO);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 26.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
+    this->transmit_hex(CODE_COOL_26_AUTO);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 27.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
+    this->transmit_hex(CODE_COOL_27_AUTO);
   }
-
-  // --- 2. Check for FAN ONLY state ---
-  else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY) {
-    if (!this->fan_mode.has_value()) {
-        ESP_LOGW(TAG, "Fan mode not set, cannot send FAN_ONLY command.");
-        return;
-    }
-    ESP_LOGD(TAG, "Sending FAN ONLY code: %s", climate_fan_mode_to_string(this->fan_mode.value()));
-    switch (*this->fan_mode) {
-      case climate::CLIMATE_FAN_LOW:
-        code_to_send = CODE_FAN_LOW; // Make sure this is defined above!
-        code_len = sizeof(CODE_FAN_LOW) / sizeof(CODE_FAN_LOW[0]);
-        break;
-      case climate::CLIMATE_FAN_MEDIUM:
-        code_to_send = CODE_FAN_MEDIUM; // Make sure this is defined above!
-        code_len = sizeof(CODE_FAN_MEDIUM) / sizeof(CODE_FAN_MEDIUM[0]);
-        break;
-      case climate::CLIMATE_FAN_HIGH:
-      default:
-        code_to_send = CODE_FAN_HIGH; // Make sure this is defined above!
-        code_len = sizeof(CODE_FAN_HIGH) / sizeof(CODE_FAN_HIGH[0]);
-        break;
-    }
+  // --- LOW FAN ---
+  else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 22.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
+    this->transmit_hex(CODE_COOL_22_LOW);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 23.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
+    this->transmit_hex(CODE_COOL_23_LOW);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 24.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
+    this->transmit_hex(CODE_COOL_24_LOW);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 25.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
+    this->transmit_hex(CODE_COOL_25_LOW);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 26.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
+    this->transmit_hex(CODE_COOL_26_LOW);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 27.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
+    this->transmit_hex(CODE_COOL_27_LOW);
   }
-
-  // --- 3. Check for COOL state ---
-  else if (this->mode == climate::CLIMATE_MODE_COOL) {
-    // --- FIX: Remove .has_value() check for target_temperature ---
-    if (!this->fan_mode.has_value()) {
-        ESP_LOGW(TAG, "Fan mode not set, cannot send COOL command.");
-        return;
-    }
-    // --- FIX: Remove the '*' operator from target_temperature ---
-    int temp = (int)roundf(this->target_temperature); // Just use it directly
-
-    ESP_LOGD(TAG, "Sending COOL code: %d°C, Fan: %s", temp, climate_fan_mode_to_string(this->fan_mode.value()));
-
-    switch (temp) {
-      case 22:
-        switch (*this->fan_mode) { // Still need * for fan_mode
-          case climate::CLIMATE_FAN_LOW:    code_to_send = CODE_COOL_22_LOW;    code_len = sizeof(CODE_COOL_22_LOW) / sizeof(CODE_COOL_22_LOW[0]); break;
-          case climate::CLIMATE_FAN_MEDIUM: code_to_send = CODE_COOL_22_MEDIUM; code_len = sizeof(CODE_COOL_22_MEDIUM) / sizeof(CODE_COOL_22_MEDIUM[0]); break;
-          case climate::CLIMATE_FAN_HIGH:   code_to_send = CODE_COOL_22_HIGH;   code_len = sizeof(CODE_COOL_22_HIGH) / sizeof(CODE_COOL_22_HIGH[0]); break;
-          default:                          code_to_send = CODE_COOL_22_AUTO;   code_len = sizeof(CODE_COOL_22_AUTO) / sizeof(CODE_COOL_22_AUTO[0]); break;
-        }
-        break;
-
-      case 23:
-        switch (*this->fan_mode) { // Still need * for fan_mode
-          case climate::CLIMATE_FAN_LOW:    code_to_send = CODE_COOL_23_LOW;    code_len = sizeof(CODE_COOL_23_LOW) / sizeof(CODE_COOL_23_LOW[0]); break;
-          case climate::CLIMATE_FAN_MEDIUM: code_to_send = CODE_COOL_23_MEDIUM; code_len = sizeof(CODE_COOL_23_MEDIUM) / sizeof(CODE_COOL_23_MEDIUM[0]); break;
-          case climate::CLIMATE_FAN_HIGH:   code_to_send = CODE_COOL_23_HIGH;   code_len = sizeof(CODE_COOL_23_HIGH) / sizeof(CODE_COOL_23_HIGH[0]); break;
-          default:                          code_to_send = CODE_COOL_23_AUTO;   code_len = sizeof(CODE_COOL_23_AUTO) / sizeof(CODE_COOL_23_AUTO[0]); break;
-        }
-        break;
-
-      case 24:
-        switch (*this->fan_mode) { // Still need * for fan_mode
-          case climate::CLIMATE_FAN_LOW:    code_to_send = CODE_COOL_24_LOW;    code_len = sizeof(CODE_COOL_24_LOW) / sizeof(CODE_COOL_24_LOW[0]); break;
-          case climate::CLIMATE_FAN_MEDIUM: code_to_send = CODE_COOL_24_MEDIUM; code_len = sizeof(CODE_COOL_24_MEDIUM) / sizeof(CODE_COOL_24_MEDIUM[0]); break;
-          case climate::CLIMATE_FAN_HIGH:   code_to_send = CODE_COOL_24_HIGH;   code_len = sizeof(CODE_COOL_24_HIGH) / sizeof(CODE_COOL_24_HIGH[0]); break;
-          default:                          code_to_send = CODE_COOL_24_AUTO;   code_len = sizeof(CODE_COOL_24_AUTO) / sizeof(CODE_COOL_24_AUTO[0]); break;
-        }
-        break;
-
-      case 25:
-        switch (*this->fan_mode) { // Still need * for fan_mode
-          case climate::CLIMATE_FAN_LOW:    code_to_send = CODE_COOL_25_LOW;    code_len = sizeof(CODE_COOL_25_LOW) / sizeof(CODE_COOL_25_LOW[0]); break;
-          case climate::CLIMATE_FAN_MEDIUM: code_to_send = CODE_COOL_25_MEDIUM; code_len = sizeof(CODE_COOL_25_MEDIUM) / sizeof(CODE_COOL_25_MEDIUM[0]); break;
-          case climate::CLIMATE_FAN_HIGH:   code_to_send = CODE_COOL_25_HIGH;   code_len = sizeof(CODE_COOL_25_HIGH) / sizeof(CODE_COOL_25_HIGH[0]); break;
-          default:                          code_to_send = CODE_COOL_25_AUTO;   code_len = sizeof(CODE_COOL_25_AUTO) / sizeof(CODE_COOL_25_AUTO[0]); break;
-        }
-        break;
-
-      case 26:
-        switch (*this->fan_mode) { // Still need * for fan_mode
-          case climate::CLIMATE_FAN_LOW:    code_to_send = CODE_COOL_26_LOW;    code_len = sizeof(CODE_COOL_26_LOW) / sizeof(CODE_COOL_26_LOW[0]); break;
-          case climate::CLIMATE_FAN_MEDIUM: code_to_send = CODE_COOL_26_MEDIUM; code_len = sizeof(CODE_COOL_26_MEDIUM) / sizeof(CODE_COOL_26_MEDIUM[0]); break;
-          case climate::CLIMATE_FAN_HIGH:   code_to_send = CODE_COOL_26_HIGH;   code_len = sizeof(CODE_COOL_26_HIGH) / sizeof(CODE_COOL_26_HIGH[0]); break;
-          default:                          code_to_send = CODE_COOL_26_AUTO;   code_len = sizeof(CODE_COOL_26_AUTO) / sizeof(CODE_COOL_26_AUTO[0]); break;
-        }
-        break;
-
-      case 27:
-        switch (*this->fan_mode) { // Still need * for fan_mode
-          case climate::CLIMATE_FAN_LOW:    code_to_send = CODE_COOL_27_LOW;    code_len = sizeof(CODE_COOL_27_LOW) / sizeof(CODE_COOL_27_LOW[0]); break;
-          case climate::CLIMATE_FAN_MEDIUM: code_to_send = CODE_COOL_27_MEDIUM; code_len = sizeof(CODE_COOL_27_MEDIUM) / sizeof(CODE_COOL_27_MEDIUM[0]); break;
-          case climate::CLIMATE_FAN_HIGH:   code_to_send = CODE_COOL_27_HIGH;   code_len = sizeof(CODE_COOL_27_HIGH) / sizeof(CODE_COOL_27_HIGH[0]); break;
-          default:                          code_to_send = CODE_COOL_27_AUTO;   code_len = sizeof(CODE_COOL_27_AUTO) / sizeof(CODE_COOL_27_AUTO[0]); break;
-        }
-        break;
-
-      default:
-        ESP_LOGW(TAG, "Temperature %d°C not supported. Sending 24°C/Auto.", temp);
-        code_to_send = CODE_COOL_24_AUTO;
-        code_len = sizeof(CODE_COOL_24_AUTO) / sizeof(CODE_COOL_24_AUTO[0]);
-        break;
-    }
+  // --- MEDIUM FAN ---
+  else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 22.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
+    this->transmit_hex(CODE_COOL_22_MEDIUM);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 23.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
+    this->transmit_hex(CODE_COOL_23_MEDIUM);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 24.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
+    this->transmit_hex(CODE_COOL_24_MEDIUM);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 25.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
+    this->transmit_hex(CODE_COOL_25_MEDIUM);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 26.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
+    this->transmit_hex(CODE_COOL_26_MEDIUM);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 27.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
+    this->transmit_hex(CODE_COOL_27_MEDIUM);
   }
-
-  // --- 4. Transmit the selected code ---
-  if (code_to_send != nullptr && code_len > 0) {
-    this->transmit_raw_code_(code_to_send, code_len);
-  } else {
-    ESP_LOGE(TAG, "Could not find a matching IR code for the current state!");
+  // --- HIGH FAN ---
+  else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 22.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
+    this->transmit_hex(CODE_COOL_22_HIGH);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 23.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
+    this->transmit_hex(CODE_COOL_23_HIGH);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 24.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
+    this->transmit_hex(CODE_COOL_24_HIGH);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 25.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
+    this->transmit_hex(CODE_COOL_25_HIGH);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 26.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
+    this->transmit_hex(CODE_COOL_26_HIGH);
+  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 27.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
+    this->transmit_hex(CODE_COOL_27_HIGH);
   }
-}
-
-// This function gets called automatically by the receiver component
-bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
-  ESP_LOGD(TAG, "Received IR Code...");
+  // --- FAN ONLY ---
+  else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY && this->fan_mode == climate::CLIMATE_FAN_LOW) {
+    this->transmit_hex(CODE_FAN_ONLY_LOW);
+  } else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
+    this->transmit_hex(CODE_FAN_ONLY_MEDIUM);
+  } else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
+    this->transmit_hex(CODE_FAN_ONLY_HIGH);
+  }
   
-  // Log the decoded signal
-  std::string hex_code = decode_to_hex(data);
-  ESP_LOGD(TAG, "Received IR code. HEX: %s", hex_code.c_str());
-
-  // --- Try to match the received code against ALL known codes ---
-  // Note: This is inefficient but straightforward. Optimization could map codes differently.
-  // Tolerance
-
-
-  // === DEBUG RAW DATA DUMP START ===
-  ESP_LOGV(TAG, "Received IR Data Dump (Size: %zu):", data.size());
-
-  std::string raw_code_chunk = "";
-  for (size_t i = 0; i < data.size(); i++) {
-    // Append the current element
-    raw_code_chunk += esphome::to_string(data[i]);
-
-    // Check if we need a comma/space
-    if (i < data.size() - 1) {
-      raw_code_chunk += ", ";
-    }
-
-    // Print chunks of 20 elements to avoid truncation (adjust 20 if needed)
-    if (((i + 1) % 20 == 0) || (i == data.size() - 1)) {
-        ESP_LOGV(TAG, "  [RAW Part %zu]: %s", (i / 20) + 1, raw_code_chunk.c_str());
-        raw_code_chunk = ""; // Reset the chunk string
-    }
-  }
-  // === DEBUG RAW DATA DUMP END ===
- 
-  int custom_tolerance = 35;
-
-  // 1. Check OFF
-  if (compare_raw_code_(data, CODE_OFF, sizeof(CODE_OFF) / sizeof(CODE_OFF[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched OFF code");
-    this->mode = climate::CLIMATE_MODE_OFF;
-    this->publish_state(); // Update Home Assistant
-    return true; // We handled this code
+  else {
+    ESP_LOGW(TAG, "No matching hex code found to transmit for current state.");
   }
 
-  // 2. Check FAN ONLY modes
-  if (compare_raw_code_(data, CODE_FAN_LOW, sizeof(CODE_FAN_LOW) / sizeof(CODE_FAN_LOW[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched FAN LOW code");
-    this->mode = climate::CLIMATE_MODE_FAN_ONLY;
-    this->fan_mode = climate::CLIMATE_FAN_LOW;
-    this->publish_state();
-    return true;
-  }
-  if (compare_raw_code_(data, CODE_FAN_MEDIUM, sizeof(CODE_FAN_MEDIUM) / sizeof(CODE_FAN_MEDIUM[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched FAN MEDIUM code");
-    this->mode = climate::CLIMATE_MODE_FAN_ONLY;
-    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-    this->publish_state();
-    return true;
-  }
-  if (compare_raw_code_(data, CODE_FAN_HIGH, sizeof(CODE_FAN_HIGH) / sizeof(CODE_FAN_HIGH[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched FAN HIGH code");
-    this->mode = climate::CLIMATE_MODE_FAN_ONLY;
-    this->fan_mode = climate::CLIMATE_FAN_HIGH;
-    this->publish_state();
-    return true;
-  }
-
-  // 3. Check COOL modes (This will be the largest section)
-  // Temp = 22
-  if (compare_raw_code_(data, CODE_COOL_22_LOW, sizeof(CODE_COOL_22_LOW) / sizeof(CODE_COOL_22_LOW[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 22 LOW code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 22.0f;
-    this->fan_mode = climate::CLIMATE_FAN_LOW;
-    this->publish_state();
-    return true;
-  }
-  if (compare_raw_code_(data, CODE_COOL_22_MEDIUM, sizeof(CODE_COOL_22_MEDIUM) / sizeof(CODE_COOL_22_MEDIUM[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 22 MEDIUM code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 22.0f;
-    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-    this->publish_state();
-    return true;
-  }
-   if (compare_raw_code_(data, CODE_COOL_22_HIGH, sizeof(CODE_COOL_22_HIGH) / sizeof(CODE_COOL_22_HIGH[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 22 HIGH code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 22.0f;
-    this->fan_mode = climate::CLIMATE_FAN_HIGH;
-    this->publish_state();
-    return true;
-  }
-
- // Temp = 23 
-  if (compare_raw_code_(data, CODE_COOL_23_LOW, sizeof(CODE_COOL_23_LOW) / sizeof(CODE_COOL_23_LOW[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 23 LOW code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 23.0f;
-    this->fan_mode = climate::CLIMATE_FAN_LOW;
-    this->publish_state();
-    return true;
-  }
-  if (compare_raw_code_(data, CODE_COOL_23_MEDIUM, sizeof(CODE_COOL_23_MEDIUM) / sizeof(CODE_COOL_23_MEDIUM[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 23 MEDIUM code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 23.0f;
-    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-    this->publish_state();
-    return true;
-  }
-   if (compare_raw_code_(data, CODE_COOL_23_HIGH, sizeof(CODE_COOL_23_HIGH) / sizeof(CODE_COOL_23_HIGH[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 23 HIGH code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 23.0f;
-    this->fan_mode = climate::CLIMATE_FAN_HIGH;
-    this->publish_state();
-    return true;
-  }
-
-  if (compare_raw_code_(data, CODE_COOL_24_LOW, sizeof(CODE_COOL_24_LOW) / sizeof(CODE_COOL_24_LOW[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 24 LOW code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 24.0f;
-    this->fan_mode = climate::CLIMATE_FAN_LOW;
-    this->publish_state();
-    return true;
-  }
-  if (compare_raw_code_(data, CODE_COOL_24_MEDIUM, sizeof(CODE_COOL_24_MEDIUM) / sizeof(CODE_COOL_24_MEDIUM[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 24 MEDIUM code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 24.0f;
-    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-    this->publish_state();
-    return true;
-  }
-   if (compare_raw_code_(data, CODE_COOL_24_HIGH, sizeof(CODE_COOL_24_HIGH) / sizeof(CODE_COOL_24_HIGH[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 24 HIGH code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 24.0f;
-    this->fan_mode = climate::CLIMATE_FAN_HIGH;
-    this->publish_state();
-    return true;
-  }
-
-  if (compare_raw_code_(data, CODE_COOL_25_LOW, sizeof(CODE_COOL_25_LOW) / sizeof(CODE_COOL_25_LOW[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 25 LOW code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 25.0f;
-    this->fan_mode = climate::CLIMATE_FAN_LOW;
-    this->publish_state();
-    return true;
-  }
-  if (compare_raw_code_(data, CODE_COOL_25_MEDIUM, sizeof(CODE_COOL_25_MEDIUM) / sizeof(CODE_COOL_25_MEDIUM[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 25 MEDIUM code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 25.0f;
-    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-    this->publish_state();
-    return true;
-  }
-   if (compare_raw_code_(data, CODE_COOL_25_HIGH, sizeof(CODE_COOL_25_HIGH) / sizeof(CODE_COOL_25_HIGH[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 25 HIGH code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 25.0f;
-    this->fan_mode = climate::CLIMATE_FAN_HIGH;
-    this->publish_state();
-    return true;
-  }
-
-  if (compare_raw_code_(data, CODE_COOL_26_LOW, sizeof(CODE_COOL_26_LOW) / sizeof(CODE_COOL_26_LOW[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 26 LOW code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 26.0f;
-    this->fan_mode = climate::CLIMATE_FAN_LOW;
-    this->publish_state();
-    return true;
-  }
-  if (compare_raw_code_(data, CODE_COOL_26_MEDIUM, sizeof(CODE_COOL_26_MEDIUM) / sizeof(CODE_COOL_26_MEDIUM[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 26 MEDIUM code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 26.0f;
-    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-    this->publish_state();
-    return true;
-  }
-   if (compare_raw_code_(data, CODE_COOL_26_HIGH, sizeof(CODE_COOL_26_HIGH) / sizeof(CODE_COOL_26_HIGH[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 26 HIGH code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 26.0f;
-    this->fan_mode = climate::CLIMATE_FAN_HIGH;
-    this->publish_state();
-    return true;
-  }
-
-  if (compare_raw_code_(data, CODE_COOL_27_LOW, sizeof(CODE_COOL_27_LOW) / sizeof(CODE_COOL_27_LOW[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 27 LOW code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 27.0f;
-    this->fan_mode = climate::CLIMATE_FAN_LOW;
-    this->publish_state();
-    return true;
-  }
-  if (compare_raw_code_(data, CODE_COOL_27_MEDIUM, sizeof(CODE_COOL_27_MEDIUM) / sizeof(CODE_COOL_27_MEDIUM[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 27 MEDIUM code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 27.0f;
-    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-    this->publish_state();
-    return true;
-  }
-   if (compare_raw_code_(data, CODE_COOL_27_HIGH, sizeof(CODE_COOL_27_HIGH) / sizeof(CODE_COOL_27_HIGH[0]), custom_tolerance)) {
-    ESP_LOGD(TAG, "Matched COOL 27 HIGH code");
-    this->mode = climate::CLIMATE_MODE_COOL;
-    this->target_temperature = 27.0f;
-    this->fan_mode = climate::CLIMATE_FAN_HIGH;
-    this->publish_state();
-    return true;
-  }
-
-  // --- If no match found ---
-  ESP_LOGD(TAG, "Received code did not match any known codes."); // Use VERBOSE level for non-matches
-  return false; // Let other listeners (if any) try to handle it
+  // Publish the new state
+  this->publish_state();
 }
+
+
+// ======================================================================
+// ===                 RECEIVER FUNCTIONS (MODIFIED)                  ===
+// ======================================================================
+
+/**
+ * @brief Receive and decode an IR command.
+ * This is now updated to decode hex and use the smart logic.
+ */
+bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
+  // Try to decode the raw data into our 64-bit hex format
+  auto decoded_hex = decode_to_uint64(data);
+
+  if (!decoded_hex.has_value()) {
+    return false; // Not a valid Carrier 64-bit code
+  }
+
+  uint64_t hex_code = decoded_hex.value();
+  ESP_LOGD(TAG, "Received IR code. HEX: 0x%016llX", hex_code);
+
+  // Get B0 (Byte 0, MSB) and B1 (Byte 1)
+  uint8_t b0 = (hex_code >> 56) & 0xFF;
+  uint8_t b1 = (hex_code >> 48) & 0xFF;
+
+  // --- Rule 1: Check Power (B0) ---
+  if (b0 == 0x20) {
+    ESP_LOGD(TAG, "Matched OFF code (B0=0x20)");
+    this->mode = climate::CLIMATE_MODE_OFF;
+    this->publish_state();
+    return true;
+  }
+
+  if (b0 != 0x28) {
+    ESP_LOGW(TAG, "Received code, but not ON or OFF (B0=0x%02X)", b0);
+    return false; // Not an ON code, ignore
+  }
+
+  // --- At this point, we know B0 == 0x28 (Power is ON) ---
+  ESP_LOGD(TAG, "Matched ON code (B0=0x28). B1=0x%02X", b1);
+
+  // --- Rule 2: Get Mode & Fan from B1 High Nibble ---
+  uint8_t b1_high_nibble = (b1 >> 4) & 0x0F;
+  
+  switch (b1_high_nibble) {
+    case 0x1:
+      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
+      this->fan_mode = climate::CLIMATE_FAN_HIGH;
+      break;
+    case 0x2:
+      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
+      this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+      break;
+    case 0x3:
+      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
+      this->fan_mode = climate::CLIMATE_FAN_LOW;
+      break;
+    case 0x4:
+      this->mode = climate::CLIMATE_MODE_COOL;
+      this->fan_mode = climate::CLIMATE_FAN_AUTO;
+      break;
+    case 0x5:
+      this->mode = climate::CLIMATE_MODE_COOL;
+      this->fan_mode = climate::CLIMATE_FAN_HIGH;
+      break;
+    case 0x6:
+      this->mode = climate::CLIMATE_MODE_COOL;
+      this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+      break;
+    case 0x7:
+      this->mode = climate::CLIMATE_MODE_COOL;
+      this->fan_mode = climate::CLIMATE_FAN_LOW;
+      break;
+    case 0xB:
+      this->mode = climate::CLIMATE_MODE_DRY;
+      this->fan_mode = climate::CLIMATE_FAN_AUTO; // DRY mode fan is usually fixed
+      break;
+    default:
+      ESP_LOGW(TAG, "Unknown B1 High Nibble: 0x%X", b1_high_nibble);
+      return false; // Unrecognized mode
+  }
+
+  // --- Rule 3: Get Temperature from B1 Low Nibble ---
+  // This only applies if we are NOT in FAN_ONLY mode
+  if (this->mode == climate::CLIMATE_MODE_COOL || this->mode == climate::CLIMATE_MODE_DRY) {
+    uint8_t b1_low_nibble = b1 & 0x0F;
+    this->target_temperature = 15.0f + b1_low_nibble;
+    ESP_LOGD(TAG, "Decoded: Mode: %d, Fan: %d, Temp: %.1f", this->mode, this->fan_mode, this->target_temperature);
+  } else {
+    // FAN_ONLY mode, temperature is irrelevant
+    ESP_LOGD(TAG, "Decoded: Mode: %d, Fan: %d", this->mode, this->fan_mode);
+  }
+
+  // Publish the new state
+  this->publish_state();
+  return true;
+}
+
 
 }  // namespace carrier_ac
 }  // namespace esphome
