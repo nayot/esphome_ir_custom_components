@@ -61,6 +61,7 @@ static const uint64_t CODE_COOL_27_HIGH = 0x285c000000490205ULL;
 static const uint64_t CODE_FAN_ONLY_LOW = 0x2839000000990007ULL;
 static const uint64_t CODE_FAN_ONLY_MEDIUM = 0x2829000000a90106ULL;
 static const uint64_t CODE_FAN_ONLY_HIGH = 0x2819000000b90205ULL;
+static const uint64_t CODE_FAN_ONLY_AUTO= 0x2819000000b90205ULL;
 
 // ======================================================================
 // ===                NEW ENCODER / DECODER FUNCTIONS                 ===
@@ -128,7 +129,7 @@ static std::vector<int32_t> encode_hex_to_raw(uint64_t hex_data) {
 
 // --- setup() and dump_config() from your original file ---
 void CarrierACClimate::setup() {
-  // If you use a sensor, restore this logic
+  //// If you use a sensor, restore this logic
   // if (this->sensor_ != nullptr) {
   //   this->sensor_->add_on_state_callback([this](float state) {
   //     this->current_temperature = state;
@@ -138,8 +139,11 @@ void CarrierACClimate::setup() {
   // } else {
   //   this->current_temperature = NAN;
   // }
-
-  // If you use a receiver, you must register the listener
+  // --- Set default state on startup ---
+  this->mode = climate::CLIMATE_MODE_OFF;
+  this->target_temperature = 25.0f; // Or any other default you prefer
+  this->fan_mode = climate::CLIMATE_FAN_AUTO;
+  //// If you use a receiver, you must register the listener
   // if (this->receiver_ != nullptr) {
   //   this->receiver_->add_listener(this);
   // }
@@ -293,6 +297,8 @@ void CarrierACClimate::control(const climate::ClimateCall &call) {
     this->transmit_hex(CODE_FAN_ONLY_MEDIUM);
   } else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
     this->transmit_hex(CODE_FAN_ONLY_HIGH);
+  } else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
+    this->transmit_hex(CODE_FAN_ONLY_AUTO);
   }
   
   else {
