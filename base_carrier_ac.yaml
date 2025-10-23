@@ -28,8 +28,8 @@ wifi:
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: ${device_name} 
-    password: !secret ap_password
+    ssid: carrier_ac_fallback 
+    password: buueng2025 
 
 captive_portal:
 
