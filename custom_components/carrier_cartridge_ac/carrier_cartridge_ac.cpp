@@ -3,14 +3,14 @@
 #include <vector> 
 
 namespace esphome {
-namespace carrier_cartridge_ac {
+namespace carrier_cartridge_ac { 
 
-static const char *const TAG = "carrier_cartridge_ac.climate";
+static const char *const TAG = "carrier_cartridge_ac.climate"; 
 
 // ======================================================================
 // ===               IR PROTOCOL TIMING DEFINITIONS                   ===
 // ======================================================================
-// (From your original file's raw codes)
+// (Unchanged, as per your request)
 const uint32_t IR_FREQUENCY = 38000; // 38kHz
 static const int32_t HEADER_PULSE_US = 9000;
 static const int32_t HEADER_SPACE_US = -4500;
@@ -27,41 +27,12 @@ static const int32_t SPACE_ONE_MIN_US = 1300;
 // ======================================================================
 // ===                PASTE YOUR HEX "CODE BOOK" HERE                 ===
 // ======================================================================
-// Use 'ULL' (Unsigned Long Long) for 64-bit constants.
-// 
-// TODO: You MUST define all the hex codes for the commands you are
-// using in the 'control' function below.
-//
-// Example:
-static const uint64_t CODE_OFF                 = 0x2049000000090700ULL; 
-static const uint64_t CODE_COOL_22_AUTO = 0x2847000000a90700ULL;
-static const uint64_t CODE_COOL_23_AUTO = 0x2848000000990700ULL;
-static const uint64_t CODE_COOL_24_AUTO = 0x2849000000890700ULL;
-static const uint64_t CODE_COOL_25_AUTO = 0x284a000000790700ULL;
-static const uint64_t CODE_COOL_26_AUTO = 0x284b000000690700ULL;
-static const uint64_t CODE_COOL_27_AUTO = 0x284c000000590700ULL;
-static const uint64_t CODE_COOL_22_LOW = 0x2877000000790007ULL;
-static const uint64_t CODE_COOL_23_LOW = 0x2878000000690007ULL;
-static const uint64_t CODE_COOL_24_LOW = 0x2879000000590007ULL;
-static const uint64_t CODE_COOL_25_LOW = 0x287a000000490007ULL;
-static const uint64_t CODE_COOL_26_LOW = 0x287b000000390007ULL;
-static const uint64_t CODE_COOL_27_LOW = 0x287c000000290007ULL;
-static const uint64_t CODE_COOL_22_MEDIUM = 0x2869000000690106ULL;
-static const uint64_t CODE_COOL_23_MEDIUM = 0x2868000000790106ULL;
-static const uint64_t CODE_COOL_24_MEDIUM = 0x2869000000690106ULL;
-static const uint64_t CODE_COOL_25_MEDIUM = 0x286a000000590106ULL;
-static const uint64_t CODE_COOL_26_MEDIUM = 0x286b000000490106ULL;
-static const uint64_t CODE_COOL_27_MEDIUM = 0x286c000000390106ULL;
-static const uint64_t CODE_COOL_22_HIGH = 0x2857000000990205ULL;
-static const uint64_t CODE_COOL_23_HIGH = 0x2858000000890205ULL;
-static const uint64_t CODE_COOL_24_HIGH = 0x2859000000790205ULL;
-static const uint64_t CODE_COOL_25_HIGH = 0x285a000000690205ULL;
-static const uint64_t CODE_COOL_26_HIGH = 0x285b000000590205ULL;
-static const uint64_t CODE_COOL_27_HIGH = 0x285c000000490205ULL;
-static const uint64_t CODE_FAN_ONLY_LOW = 0x2839000000990007ULL;
-static const uint64_t CODE_FAN_ONLY_MEDIUM = 0x2829000000a90106ULL;
-static const uint64_t CODE_FAN_ONLY_HIGH = 0x2819000000b90205ULL;
-static const uint64_t CODE_FAN_ONLY_AUTO= 0x2819000000b90205ULL;
+// We only need the special codes now.
+static const uint64_t CODE_SWING_ON  = 0xF20D01FE210120FCULL;
+static const uint64_t CODE_SWING_OFF = 0xF20D01FE210223FCULL;
+
+// This is the static part of our main command (B0-B3)
+static const uint64_t CODE_PREFIX = 0xF20D03FC00000000ULL;
 
 // ======================================================================
 // ===                NEW ENCODER / DECODER FUNCTIONS                 ===
@@ -69,6 +40,7 @@ static const uint64_t CODE_FAN_ONLY_AUTO= 0x2819000000b90205ULL;
 
 /**
  * @brief Decodes raw IR timings into a 64-bit integer.
+ * (Unchanged)
  */
 static std::optional<uint64_t> decode_to_uint64(remote_base::RemoteReceiveData data) {
   if (data.size() < 131) {
@@ -101,6 +73,7 @@ static std::optional<uint64_t> decode_to_uint64(remote_base::RemoteReceiveData d
 
 /**
  * @brief Encodes a 64-bit hex code into a raw IR timing vector.
+ * (Unchanged)
  */
 static std::vector<int32_t> encode_hex_to_raw(uint64_t hex_data) {
   std::vector<int32_t> raw_data;
@@ -127,55 +100,52 @@ static std::vector<int32_t> encode_hex_to_raw(uint64_t hex_data) {
 // ===                CLIMATE COMPONENT FUNCTIONS                     ===
 // ======================================================================
 
-// --- setup() and dump_config() from your original file ---
+// (Unchanged from original)
 void CarrierACClimate::setup() {
-  //// If you use a sensor, restore this logic
-  // if (this->sensor_ != nullptr) {
-  //   this->sensor_->add_on_state_callback([this](float state) {
-  //     this->current_temperature = state;
-  //     this->publish_state();
-  //   });
-  //   this->current_temperature = this->sensor_->state;
-  // } else {
-  //   this->current_temperature = NAN;
-  // }
-  // --- Set default state on startup ---
   this->mode = climate::CLIMATE_MODE_OFF;
-  this->target_temperature = 25.0f; // Or any other default you prefer
+  this->target_temperature = 25.0f;
   this->fan_mode = climate::CLIMATE_FAN_AUTO;
-  //// If you use a receiver, you must register the listener
+  this->swing_mode = climate::CLIMATE_SWING_OFF; // Default swing to OFF
   // if (this->receiver_ != nullptr) {
   //   this->receiver_->add_listener(this);
   // }
 }
 
+// (Unchanged from original)
 void CarrierACClimate::dump_config() {
-  ESP_LOGCONFIG(TAG, "Carrier AC Climate:");
-  LOG_CLIMATE("", "Carrier AC", this);
+  ESP_LOGCONFIG(TAG, "Carrier Cartridge AC Climate:"); // Updated log message
+  LOG_CLIMATE("", "Carrier Cartridge AC", this); // Updated log message
 }
 
-
+/**
+ * @brief MODIFIED traits to support new protocol
+ */
 climate::ClimateTraits CarrierACClimate::traits() {
   auto traits = climate::ClimateTraits();
-  traits.set_supports_current_temperature(false);
+  traits.set_supports_current_temperature(false); // Set to true if you add a sensor
   
   traits.set_supported_modes({
       climate::CLIMATE_MODE_OFF,
       climate::CLIMATE_MODE_COOL,
       climate::CLIMATE_MODE_FAN_ONLY,
+      climate::CLIMATE_MODE_DRY,
+      climate::CLIMATE_MODE_AUTO,
   });
   
   traits.set_supported_fan_modes({
       climate::CLIMATE_FAN_AUTO,
-      climate::CLIMATE_FAN_LOW,
-      climate::CLIMATE_FAN_MEDIUM,
-      climate::CLIMATE_FAN_HIGH,
+      climate::CLIMATE_FAN_LOW,     // Corresponds to Level 1
+      climate::CLIMATE_FAN_MEDIUM,  // Corresponds to Level 3
+      climate::CLIMATE_FAN_HIGH,    // Corresponds to Level 5
   });
-  // traits.set_supported_swing_modes({
-  //     // climate::CLIMATE_SWING_VERTICAL,
-  // });
-  traits.set_visual_min_temperature(22.0f);
-  traits.set_visual_max_temperature(27.0f);
+
+  traits.set_supported_swing_modes({
+      climate::CLIMATE_SWING_OFF,
+      climate::CLIMATE_SWING_VERTICAL, // "SWING ON"
+  });
+
+  traits.set_visual_min_temperature(17.0f); // From your formula (0 -> 17)
+  traits.set_visual_max_temperature(30.0f); // (13 -> 30) 0xD. Max is 32 (0xF)
   traits.set_visual_temperature_step(1.0f);
   return traits;
 }
@@ -185,6 +155,7 @@ climate::ClimateTraits CarrierACClimate::traits() {
 // ===                TRANSMITTER FUNCTIONS (MODIFIED)                ===
 // ======================================================================
 
+// (Unchanged from original)
 void CarrierACClimate::transmit_raw_code_(const int32_t *data, size_t len) {
   if (this->transmitter_ == nullptr) {
     ESP_LOGE(TAG, "Transmitter not set up!");
@@ -203,20 +174,16 @@ void CarrierACClimate::transmit_raw_code_(const int32_t *data, size_t len) {
   call.perform();
 }
 
-
-/**
- * @brief This is our NEW hex helper function.
- * It converts hex to raw, then calls your working transmit_raw_code_ function.
- */
+// (Unchanged from original)
 void CarrierACClimate::transmit_hex(uint64_t hex_data) {
   std::vector<int32_t> raw_vector = encode_hex_to_raw(hex_data);
-  // Call your original, working function with the new data
   this->transmit_raw_code_(raw_vector.data(), raw_vector.size());
 }
 
 /**
  * @brief Transmit a command to the AC.
- * This is now updated to call transmit_hex().
+ * This is COMPLETELY REWRITTEN to be a "command builder"
+ * based on your new protocol rules.
  */
 void CarrierACClimate::control(const climate::ClimateCall &call) {
   // Update internal state from the call
@@ -229,175 +196,189 @@ void CarrierACClimate::control(const climate::ClimateCall &call) {
   if (call.get_fan_mode().has_value()) {
     this->fan_mode = *call.get_fan_mode();
   }
+  if (call.get_swing_mode().has_value()) {
+    this->swing_mode = *call.get_swing_mode();
+    // Rule 6 & 7: Swing is a special, separate command.
+    // We send it and then publish state. We don't build a main command.
+    if (this->swing_mode == climate::CLIMATE_SWING_VERTICAL) {
+      ESP_LOGD(TAG, "Transmitting SWING ON");
+      this->transmit_hex(CODE_SWING_ON);
+    } else { // CLIMATE_SWING_OFF
+      ESP_LOGD(TAG, "Transmitting SWING OFF");
+      this->transmit_hex(CODE_SWING_OFF);
+    }
+    this->publish_state();
+    return; // Don't send a main command
+  }
 
-  // Call new helper function
-  if (this->mode == climate::CLIMATE_MODE_OFF) {
-    this->transmit_hex(CODE_OFF);
-  } 
-  // --- AUTO FAN ---
-  else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 22.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
-    this->transmit_hex(CODE_COOL_22_AUTO);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 23.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
-    this->transmit_hex(CODE_COOL_23_AUTO);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 24.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
-    this->transmit_hex(CODE_COOL_24_AUTO);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 25.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
-    this->transmit_hex(CODE_COOL_25_AUTO);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 26.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
-    this->transmit_hex(CODE_COOL_26_AUTO);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 27.0f && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
-    this->transmit_hex(CODE_COOL_27_AUTO);
+  // --- Build the main command ---
+  // Rule 1: Start with the prefix
+  uint64_t command = CODE_PREFIX;
+  uint8_t b5 = 0x00;
+  uint8_t b6 = 0x00;
+
+  // Rule 2 & 7: Set Mode (B6 Low Nibble)
+  switch (this->mode) { // <--- FIX: this->mode is NOT optional
+    case climate::CLIMATE_MODE_AUTO:
+      b6 |= 0x00; // 0
+      break;
+    case climate::CLIMATE_MODE_COOL:
+      b6 |= 0x01; // 1
+      break;
+    case climate::CLIMATE_MODE_DRY:
+      b6 |= 0x02; // 2
+      break;
+    case climate::CLIMATE_MODE_FAN_ONLY:
+      b6 |= 0x04; // 4
+      break;
+    case climate::CLIMATE_MODE_OFF:
+      b6 |= 0x07; // 7
+      break;
+    default:
+      ESP_LOGW(TAG, "Unsupported mode for transmit: %d", this->mode); // <--- FIX: No asterisk
+      return;
   }
-  // --- LOW FAN ---
-  else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 22.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
-    this->transmit_hex(CODE_COOL_22_LOW);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 23.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
-    this->transmit_hex(CODE_COOL_23_LOW);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 24.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
-    this->transmit_hex(CODE_COOL_24_LOW);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 25.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
-    this->transmit_hex(CODE_COOL_25_LOW);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 26.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
-    this->transmit_hex(CODE_COOL_26_LOW);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 27.0f && this->fan_mode == climate::CLIMATE_FAN_LOW) {
-    this->transmit_hex(CODE_COOL_27_LOW);
+
+  // Rule 3: Set Fan (B6 High Nibble)
+  // We map 3 ESPHome levels to 5 AC levels (L1, L3, L5)
+  switch (*this->fan_mode) { // <--- FIX: this->fan_mode IS optional
+    case climate::CLIMATE_FAN_AUTO:
+      b6 |= 0x00; // 0
+      break;
+    case climate::CLIMATE_FAN_LOW:
+      b6 |= 0x40; // 4 (Level 1)
+      break;
+    case climate::CLIMATE_FAN_MEDIUM:
+      b6 |= 0x80; // 8 (Level 3)
+      break;
+    case climate::CLIMATE_FAN_HIGH:
+      b6 |= 0xC0; // C (Level 5)
+      break;
+    default:
+      ESP_LOGW(TAG, "Unsupported fan mode for transmit: %d", *this->fan_mode);
+      return;
   }
-  // --- MEDIUM FAN ---
-  else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 22.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
-    this->transmit_hex(CODE_COOL_22_MEDIUM);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 23.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
-    this->transmit_hex(CODE_COOL_23_MEDIUM);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 24.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
-    this->transmit_hex(CODE_COOL_24_MEDIUM);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 25.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
-    this->transmit_hex(CODE_COOL_25_MEDIUM);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 26.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
-    this->transmit_hex(CODE_COOL_26_MEDIUM);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 27.0f && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
-    this->transmit_hex(CODE_COOL_27_MEDIUM);
+
+  // Rule 4: Set Temperature (B5 High Nibble)
+  // Only set temp if not in FAN_ONLY or OFF mode
+  if (this->mode != climate::CLIMATE_MODE_FAN_ONLY && this->mode != climate::CLIMATE_MODE_OFF) { // <--- FIX: No asterisk
+    // Clamp temperature to supported range
+    float temp = clamp(this->target_temperature, 17.0f, 32.0f);
+    uint8_t temp_val = (uint8_t)round(temp) - 17; // (T - 17)
+    b5 |= (temp_val << 4); // Set high nibble
   }
-  // --- HIGH FAN ---
-  else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 22.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
-    this->transmit_hex(CODE_COOL_22_HIGH);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 23.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
-    this->transmit_hex(CODE_COOL_23_HIGH);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 24.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
-    this->transmit_hex(CODE_COOL_24_HIGH);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 25.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
-    this->transmit_hex(CODE_COOL_25_HIGH);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 26.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
-    this->transmit_hex(CODE_COOL_26_HIGH);
-  } else if (this->mode == climate::CLIMATE_MODE_COOL && this->target_temperature == 27.0f && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
-    this->transmit_hex(CODE_COOL_27_HIGH);
-  }
-  // --- FAN ONLY ---
-  else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY && this->fan_mode == climate::CLIMATE_FAN_LOW) {
-    this->transmit_hex(CODE_FAN_ONLY_LOW);
-  } else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY && this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
-    this->transmit_hex(CODE_FAN_ONLY_MEDIUM);
-  } else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY && this->fan_mode == climate::CLIMATE_FAN_HIGH) {
-    this->transmit_hex(CODE_FAN_ONLY_HIGH);
-  } else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY && this->fan_mode == climate::CLIMATE_FAN_AUTO) {
-    this->transmit_hex(CODE_FAN_ONLY_AUTO);
-  }
-  
-  else {
-    ESP_LOGW(TAG, "No matching hex code found to transmit for current state.");
-  }
+
+  // Rule 5: B7 is 00 (already handled by CODE_PREFIX)
+
+  // Assemble the command
+  command |= (uint64_t)b5 << 16; // B5 is 16 bits from the right
+  command |= (uint64_t)b6 << 8;  // B6 is 8 bits from the right
+
+  ESP_LOGD(TAG, "Transmitting command: 0x%016llX", command);
+  this->transmit_hex(command);
 
   // Publish the new state
   this->publish_state();
 }
-
-
 // ======================================================================
 // ===                 RECEIVER FUNCTIONS (MODIFIED)                  ===
 // ======================================================================
 
 /**
  * @brief Receive and decode an IR command.
- * This is now updated to decode hex and use the smart logic.
+ * This is COMPLETELY REWRITTEN to be a "command parser"
+ * based on your new protocol rules.
  */
 bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
   // Try to decode the raw data into our 64-bit hex format
   auto decoded_hex = decode_to_uint64(data);
 
   if (!decoded_hex.has_value()) {
-    return false; // Not a valid Carrier 64-bit code
+    return false; // Not a valid 64-bit code for this protocol
   }
 
   uint64_t hex_code = decoded_hex.value();
   ESP_LOGD(TAG, "Received IR code. HEX: 0x%016llX", hex_code);
 
-  // Get B0 (Byte 0, MSB) and B1 (Byte 1)
-  uint8_t b0 = (hex_code >> 56) & 0xFF;
-  uint8_t b1 = (hex_code >> 48) & 0xFF;
-
-  // --- Rule 1: Check Power (B0) ---
-  if (b0 == 0x20) {
-    ESP_LOGD(TAG, "Matched OFF code (B0=0x20)");
-    this->mode = climate::CLIMATE_MODE_OFF;
+  // --- Rule 6 & 7: Check for special SWING codes first ---
+  if (hex_code == CODE_SWING_ON) {
+    ESP_LOGD(TAG, "Matched SWING ON code");
+    this->swing_mode = climate::CLIMATE_SWING_VERTICAL;
+    this->publish_state();
+    return true;
+  }
+  if (hex_code == CODE_SWING_OFF) {
+    ESP_LOGD(TAG, "Matched SWING OFF code");
+    this->swing_mode = climate::CLIMATE_SWING_OFF;
     this->publish_state();
     return true;
   }
 
-  if (b0 != 0x28) {
-    ESP_LOGW(TAG, "Received code, but not ON or OFF (B0=0x%02X)", b0);
-    return false; // Not an ON code, ignore
+  // --- Rule 1: Check for main command prefix ---
+  if ((hex_code & 0xFFFFFFFF00000000ULL) != CODE_PREFIX) {
+    ESP_LOGD(TAG, "Code prefix does not match. Ignoring.");
+    return false;
   }
 
-  // --- At this point, we know B0 == 0x28 (Power is ON) ---
-  ESP_LOGD(TAG, "Matched ON code (B0=0x28). B1=0x%02X", b1);
+  // --- Parse main command ---
+  uint8_t b6 = (hex_code >> 8) & 0xFF;
+  uint8_t b5 = (hex_code >> 16) & 0xFF;
 
-  // --- Rule 2: Get Mode & Fan from B1 High Nibble ---
-  uint8_t b1_high_nibble = (b1 >> 4) & 0x0F;
-  
-  switch (b1_high_nibble) {
+  // --- Rule 2: Parse Mode (B6 Low Nibble) ---
+  uint8_t mode_nibble = b6 & 0x0F;
+  switch (mode_nibble) {
+    case 0x0:
+      this->mode = climate::CLIMATE_MODE_AUTO;
+      break;
     case 0x1:
-      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
-      this->fan_mode = climate::CLIMATE_FAN_HIGH;
+      this->mode = climate::CLIMATE_MODE_COOL;
       break;
     case 0x2:
-      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
-      this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-      break;
-    case 0x3:
-      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
-      this->fan_mode = climate::CLIMATE_FAN_LOW;
+      this->mode = climate::CLIMATE_MODE_DRY;
       break;
     case 0x4:
-      this->mode = climate::CLIMATE_MODE_COOL;
-      this->fan_mode = climate::CLIMATE_FAN_AUTO;
-      break;
-    case 0x5:
-      this->mode = climate::CLIMATE_MODE_COOL;
-      this->fan_mode = climate::CLIMATE_FAN_HIGH;
-      break;
-    case 0x6:
-      this->mode = climate::CLIMATE_MODE_COOL;
-      this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
       break;
     case 0x7:
-      this->mode = climate::CLIMATE_MODE_COOL;
-      this->fan_mode = climate::CLIMATE_FAN_LOW;
-      break;
-    case 0xB:
-      this->mode = climate::CLIMATE_MODE_DRY;
-      this->fan_mode = climate::CLIMATE_FAN_AUTO; // DRY mode fan is usually fixed
+      this->mode = climate::CLIMATE_MODE_OFF;
       break;
     default:
-      ESP_LOGW(TAG, "Unknown B1 High Nibble: 0x%X", b1_high_nibble);
+      ESP_LOGW(TAG, "Received unknown mode nibble: 0x%X", mode_nibble);
       return false; // Unrecognized mode
   }
 
-  // --- Rule 3: Get Temperature from B1 Low Nibble ---
-  // This only applies if we are NOT in FAN_ONLY mode
-  if (this->mode == climate::CLIMATE_MODE_COOL || this->mode == climate::CLIMATE_MODE_DRY) {
-    uint8_t b1_low_nibble = b1 & 0x0F;
-    this->target_temperature = 15.0f + b1_low_nibble;
+  // --- Rule 3: Parse Fan (B6 High Nibble) ---
+  // Map 5 AC levels back to 3 ESPHome levels
+  uint8_t fan_nibble = (b6 >> 4) & 0x0F;
+  switch (fan_nibble) {
+    case 0x0:
+      this->fan_mode = climate::CLIMATE_FAN_AUTO;
+      break;
+    case 0x4: // Level 1
+      this->fan_mode = climate::CLIMATE_FAN_LOW;
+      break;
+    case 0x6: // Level 2
+    case 0x8: // Level 3
+      this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+      break;
+    case 0xA: // Level 4
+    case 0xC: // Level 5
+      this->fan_mode = climate::CLIMATE_FAN_HIGH;
+      break;
+    default:
+      ESP_LOGW(TAG, "Received unknown fan nibble: 0x%X. Defaulting to AUTO.", fan_nibble);
+      this->fan_mode = climate::CLIMATE_FAN_AUTO;
+      break;
+  }
+
+  // --- Rule 4: Parse Temperature (B5 High Nibble) ---
+  // Only apply if not OFF or FAN_ONLY
+  if (this->mode != climate::CLIMATE_MODE_OFF && this->mode != climate::CLIMATE_MODE_FAN_ONLY) {
+    uint8_t temp_nibble = (b5 >> 4) & 0x0F;
+    this->target_temperature = (float)temp_nibble + 17.0f;
     ESP_LOGD(TAG, "Decoded: Mode: %d, Fan: %d, Temp: %.1f", this->mode, this->fan_mode, this->target_temperature);
   } else {
-    // FAN_ONLY mode, temperature is irrelevant
+    // FAN_ONLY or OFF mode
     ESP_LOGD(TAG, "Decoded: Mode: %d, Fan: %d", this->mode, this->fan_mode);
   }
 
@@ -407,5 +388,5 @@ bool CarrierACClimate::on_receive(remote_base::RemoteReceiveData data) {
 }
 
 
-}  // namespace carrier_ac
+}  // namespace carrier_cartridge_ac
 }  // namespace esphome

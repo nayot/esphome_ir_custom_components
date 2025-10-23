@@ -44,7 +44,7 @@ remote_receiver:
       input: true
       pullup: true
   tolerance: 60%
-  dump: all
+  dump: raw
 
 remote_transmitter:
   id: transmitter
