@@ -1,10 +1,8 @@
 substitutions:
-  device_name: ""
+  device_name: "" 
   friendly_name: ""
-
 esphome:
-  name: ${device_name}
-  friendly_name: ${friendly_name} 
+  name: ${device_name} 
 
 esp8266:
   board: esp01_1m
@@ -24,12 +22,12 @@ ota:
 
 wifi:
   ssid: !secret wifi_ssid
-  # password: !secret wifi_password
+  password: !secret wifi_password
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: carrier_ac_fallback 
-    password: buueng2025 
+    password: engbuu2025 
 
 captive_portal:
 
@@ -46,7 +44,7 @@ remote_receiver:
       input: true
       pullup: true
   tolerance: 60%
-  # dump: raw
+  dump: all
 
 remote_transmitter:
   id: transmitter
@@ -71,10 +69,10 @@ sensor:
 #     components: [ carrier_ac ]
 external_components:
   - source: ./custom_components
-    components: [ carrier_ac ]
+    components: [ carrier_cartridge_ac ]
 
 climate:
-  - platform: carrier_ac
+  - platform: carrier_cartridge_ac
     name: ${device_name} 
     transmitter_id: transmitter
     receiver_id: rcvr
