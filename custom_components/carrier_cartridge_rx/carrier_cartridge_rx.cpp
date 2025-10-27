@@ -30,8 +30,8 @@ static const int32_t SPACE_ONE_MIN_US = 1300;
 // ======================================================================
 // ===                HEX "CODE BOOK" FOR SPECIAL CODES               ===
 // ======================================================================
-static const uint64_t CODE_SWING_ON  = 0xF20D01FE210120FCULL;
-static const uint64_t CODE_SWING_OFF = 0xF20D01FE210100DCULL;
+static const uint64_t CODE_SWING_ON  = 0xF20D01FE210120FCULL; // Rule 6
+static const uint64_t CODE_SWING_OFF = 0xF20D01FE210223FCULL; // Rule 7
 
 // ======================================================================
 // ===                DECODER FUNCTION (Keep This)                    ===
@@ -92,9 +92,8 @@ std::string rx_climate_swing_mode_to_string(climate::ClimateSwingMode swing_mode
 // ===                COMPONENT FUNCTIONS                             ===
 // ======================================================================
 
-// IMPLEMENT the function here
+// *** FIX 1: Use register_listener (based on your reference file) ***
 void CarrierCartridgeRx::set_receiver_component(remote_receiver::RemoteReceiverComponent *receiver) {
-  // *** FIX: Use register_listener instead of add_listener ***
   receiver->register_listener(this);
 }
 
@@ -110,7 +109,9 @@ void CarrierCartridgeRx::dump_config() {
   LOG_TEXT_SENSOR("  ", "Swing Mode Sensor", this->swing_mode_sensor_);
 }
 
-// on_receive: Decodes and publishes to sensors
+// ======================================================================
+// ===                on_receive LOGIC (Protocol v2) ===
+// ======================================================================
 bool CarrierCartridgeRx::on_receive(remote_base::RemoteReceiveData data) {
   auto decoded_hex = decode_to_uint64(data);
   if (!decoded_hex.has_value()) {
@@ -118,84 +119,88 @@ bool CarrierCartridgeRx::on_receive(remote_base::RemoteReceiveData data) {
   }
 
   uint64_t hex_code = decoded_hex.value();
-  ESP_LOGD(TAG, "on_receive: Decoded HEX prefix: 0x%016llX", hex_code);
+  ESP_LOGD(TAG, "on_receive: Decoded HEX: 0x%016llX", hex_code);
 
-  climate::ClimateMode received_mode;
-  climate::ClimateFanMode received_fan_mode;
-  climate::ClimateSwingMode received_swing_mode;
+  // *** FIX 2: Initialize variables to a default state ***
+  climate::ClimateMode received_mode = climate::CLIMATE_MODE_OFF;
+  climate::ClimateFanMode received_fan_mode = climate::CLIMATE_FAN_AUTO;
   float received_temp = NAN;
-  bool state_decoded = false;
+  bool state_decoded = false; // Flag to indicate if we decoded a main state
+  bool swing_decoded = false; // Flag for special swing codes
 
-  // Check for special SWING codes first
-  if (hex_code == CODE_SWING_ON) { // Uses constant
+  // --- Rule 6 & 7: Check for special SWING codes first ---
+  if (hex_code == CODE_SWING_ON) {
     ESP_LOGD(TAG, "on_receive: Matched SWING ON code");
     if (this->swing_mode_sensor_ != nullptr && this->swing_mode_sensor_->get_raw_state() != "VERTICAL") {
        this->swing_mode_sensor_->publish_state("VERTICAL");
     }
-    return true; // Handled
-  } else if (hex_code == CODE_SWING_OFF) { // Uses constant
+    swing_decoded = true;
+  } else if (hex_code == CODE_SWING_OFF) {
     ESP_LOGD(TAG, "on_receive: Matched SWING OFF code");
     if (this->swing_mode_sensor_ != nullptr && this->swing_mode_sensor_->get_raw_state() != "OFF") {
        this->swing_mode_sensor_->publish_state("OFF");
     }
-    return true; // Handled
-  } else {
-      // --- Parse the main state code ---
-      uint64_t prefix = (hex_code >> 24) & 0xFFFFFFFFFFULL;
-      if (prefix != 0xF20D01FE21ULL) {
-        return false;
-      }
-      state_decoded = true;
-
-      uint8_t b5 = (hex_code >> 24) & 0xFF;
-      uint8_t b6 = (hex_code >> 16) & 0xFF;
-      uint8_t b7 = (hex_code >> 8) & 0xFF;
-      uint8_t power_nibble = (b5 >> 4) & 0x0F;
-      uint8_t mode_nibble = b5 & 0x0F;
-
-      if (power_nibble == 0x0) { received_mode = climate::CLIMATE_MODE_OFF; }
-      else {
-        switch (mode_nibble) {
-          case 0x8: received_mode = climate::CLIMATE_MODE_COOL; break;
-          case 0x1: received_mode = climate::CLIMATE_MODE_HEAT; break;
-          case 0x2: received_mode = climate::CLIMATE_MODE_DRY; break;
-          case 0x0: received_mode = climate::CLIMATE_MODE_FAN_ONLY; break;
-          default: ESP_LOGW(TAG, "on_receive: Unknown mode nibble: 0x%X", mode_nibble); state_decoded=false;
-        }
-      }
-
-      uint8_t fan_nibble = (b6 >> 4) & 0x0F;
-      switch (fan_nibble) {
-        case 0x0: received_fan_mode = climate::CLIMATE_FAN_AUTO; break;
-        case 0x4: received_fan_mode = climate::CLIMATE_FAN_LOW; break;
-        case 0x6: case 0x8: received_fan_mode = climate::CLIMATE_FAN_MEDIUM; break;
-        case 0xA: case 0xC: received_fan_mode = climate::CLIMATE_FAN_HIGH; break;
-        default: received_fan_mode = climate::CLIMATE_FAN_AUTO; break;
-      }
-
-      if (state_decoded && received_mode != climate::CLIMATE_MODE_OFF && received_mode != climate::CLIMATE_MODE_FAN_ONLY) {
-        uint8_t temp_nibble = b6 & 0x0F;
-        received_temp = 17.0f + temp_nibble;
-        received_temp = clamp(received_temp, 17.0f, 30.0f);
-      }
-
-      uint8_t swing_nibble = (b7 >> 4) & 0x0F;
-      if (swing_nibble == 0x2) { received_swing_mode = climate::CLIMATE_SWING_VERTICAL; }
-      else { received_swing_mode = climate::CLIMATE_SWING_OFF; }
+    swing_decoded = true;
   }
 
-  // --- Publish state to sensors if decoded successfully ---
+  // --- Rule 1: Check for main code prefix ---
+  uint32_t prefix = (hex_code >> 32) & 0xFFFFFFFFULL;
+  if (prefix == 0xF20D03FCULL) {
+    ESP_LOGD(TAG, "on_receive: Matched main state prefix 0xF20D03FC");
+    state_decoded = true;
+
+    uint8_t b5 = (hex_code >> 16) & 0xFF;
+    uint8_t b6 = (hex_code >> 8) & 0xFF;
+
+    // --- Rule 2: Parse Mode (B6 Low Nibble) ---
+    uint8_t mode_nibble = b6 & 0x0F;
+    switch (mode_nibble) {
+        case 0x0: received_mode = climate::CLIMATE_MODE_AUTO; break;
+        case 0x1: received_mode = climate::CLIMATE_MODE_COOL; break;
+        case 0x2: received_mode = climate::CLIMATE_MODE_DRY; break;
+        case 0x4: received_mode = climate::CLIMATE_MODE_FAN_ONLY; break;
+        case 0x7: received_mode = climate::CLIMATE_MODE_OFF; break;
+        default:
+          ESP_LOGW(TAG, "on_receive: Unknown mode nibble: 0x%X", mode_nibble);
+          state_decoded = false; 
+    }
+
+    // --- Rule 3: Parse Fan (B6 High Nibble) ---
+    uint8_t fan_nibble = (b6 >> 4) & 0x0F;
+    switch (fan_nibble) {
+        case 0x0: received_fan_mode = climate::CLIMATE_FAN_AUTO; break;
+        case 0x4: received_fan_mode = climate::CLIMATE_FAN_LOW; break; // Level 1
+        case 0x6: received_fan_mode = climate::CLIMATE_FAN_MEDIUM; break; // Level 2
+        case 0x8: received_fan_mode = climate::CLIMATE_FAN_MEDIUM; break; // Level 3
+        case 0xA: received_fan_mode = climate::CLIMATE_FAN_HIGH; break; // Level 4
+        case 0xC: received_fan_mode = climate::CLIMATE_FAN_HIGH; break; // Level 5
+        default:
+          received_fan_mode = climate::CLIMATE_FAN_AUTO; 
+    }
+
+    // --- Rule 4: Parse Temperature (B5 High Nibble) ---
+    // This check now safely uses the initialized 'received_mode'
+    if (state_decoded && received_mode != climate::CLIMATE_MODE_OFF && received_mode != climate::CLIMATE_MODE_FAN_ONLY) {
+      uint8_t temp_nibble = (b5 >> 4) & 0x0F;
+      received_temp = temp_nibble + 17.0f; // T = value + 17
+      received_temp = clamp(received_temp, 17.0f, 30.0f); 
+    }
+  }
+
+
+  // --- Publish state to sensors if a main state was decoded ---
   if (state_decoded) {
       std::string mode_str = rx_climate_mode_to_string(received_mode);
       std::string fan_mode_str = rx_climate_fan_mode_to_string(received_fan_mode);
-      std::string swing_mode_str = rx_climate_swing_mode_to_string(received_swing_mode);
       std::string temp_str = "";
+      
       if (!std::isnan(received_temp)) {
           char temp_buffer[10];
           snprintf(temp_buffer, sizeof(temp_buffer), "%.1f", received_temp);
+          // *** FIX 3: Added missing semicolon ***
           temp_str = temp_buffer;
       } else if (received_mode != climate::CLIMATE_MODE_OFF && received_mode != climate::CLIMATE_MODE_FAN_ONLY) {
-           temp_str = "N/A"; // Or ""
+           temp_str = "N/A"; 
       }
 
       bool published = false;
@@ -211,18 +216,17 @@ bool CarrierCartridgeRx::on_receive(remote_base::RemoteReceiveData data) {
           this->target_temperature_sensor_->publish_state(temp_str);
           published = true;
       }
-      if (this->swing_mode_sensor_ != nullptr && this->swing_mode_sensor_->get_raw_state() != swing_mode_str) {
-          this->swing_mode_sensor_->publish_state(swing_mode_str);
-          published = true;
-      }
+      
       if (published) {
-          ESP_LOGD(TAG, "Published updated state: Mode=%s, Fan=%s, Temp=%s, Swing=%s",
-                   mode_str.c_str(), fan_mode_str.c_str(), temp_str.c_str(), swing_mode_str.c_str());
+          ESP_LOGD(TAG, "Published updated state: Mode=%s, Fan=%s, Temp=%s",
+                   mode_str.c_str(), fan_mode_str.c_str(), temp_str.c_str());
       } else {
           ESP_LOGD(TAG, "Received state matches current sensor state, not publishing.");
       }
   }
-  return true; // We identified the code
+
+  // Return true if we identified either a main state OR a swing code
+  return state_decoded || swing_decoded; 
 }
 
 } // namespace carrier_cartridge_rx
