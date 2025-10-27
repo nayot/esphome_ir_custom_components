@@ -3,5 +3,6 @@ ESPHome custom components to control Air Conditioning Systems not yet supported 
 
 | Manufacturer |  Model  | Custom Component Platform | Transmit | Receive | Remarks |
 |--------------|---------|----------------|----------|----------|--------|
-|  Carrier     |  Old |   carrier_ac         |   Yes    |   Yes    | 22 - 27 C Cool mode |
+|  Carrier     |  Old |   carrier_ac         |   Yes    |   Yes    | custom_components |
+| Carrier      | Cartridge | carrier_cartridge_rx | Yes | Yes | Tx: heatpumpir, Rx: custom_components, HA Automation for reflecting received states to a/c card|
 
