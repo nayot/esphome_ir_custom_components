@@ -1,0 +1,116 @@
+# Automation Template to automatically change the a/c state in HA in accordance with
+# the received state from the remote controller. Use this file to setup the HA automation.
+
+# In this file 'carrier_cartridge_ac' is the device id. You must replace it with your own.
+# It appears as the prefix for entities.
+# Check and take a good care for climate entities as the names varired.
+
+alias: Carrier Cartridge Automation
+description: Sync A/C state with received IR signals
+triggers:
+  - trigger: state
+    entity_id: sensor.carrier_cartridge_ac_ac_received_mode
+    id: MODE_COOL
+    to: COOL
+  - trigger: state
+    entity_id: sensor.carrier_cartridge_ac_ac_received_mode
+    id: MODE_OFF
+    to: "OFF"
+  - trigger: state
+    entity_id: sensor.carrier_cartridge_ac_ac_received_mode
+    id: MODE_FAN
+    to: FAN_ONLY
+  - trigger: state
+    entity_id: sensor.carrier_cartridge_ac_ac_received_mode
+    id: MODE_DRY
+    to: DRY
+  - trigger: state
+    entity_id: sensor.carrier_cartridge_ac_ac_received_mode
+    id: MODE_AUTO
+    to: AUTO
+  - trigger: state
+    entity_id: sensor.carrier_cartridge_ac_ac_received_target_temp
+    id: TEMP_CHANGED
+  - trigger: state
+    entity_id:
+      - sensor.carrier_cartridge_ac_ac_received_fan_mode
+    id: FAN_CHANGED
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: MODE_COOL
+        sequence:
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: climate.carrier_cartridge_ac_carrier_cartridge_a_c
+            data:
+              hvac_mode: cool
+      - conditions:
+          - condition: trigger
+            id: MODE_OFF
+        sequence:
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: climate.carrier_cartridge_ac_carrier_cartridge_a_c
+            data:
+              hvac_mode: "off"
+      - conditions:
+          - condition: trigger
+            id: MODE_FAN
+        sequence:
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: climate.carrier_cartridge_ac_carrier_cartridge_a_c
+            data:
+              hvac_mode: fan_only
+      - conditions:
+          - condition: trigger
+            id: MODE_DRY
+        sequence:
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: climate.carrier_cartridge_ac_carrier_cartridge_a_c
+            data:
+              hvac_mode: dry
+      - conditions:
+          - condition: trigger
+            id: MODE_AUTO
+        sequence:
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: climate.carrier_cartridge_ac_carrier_cartridge_a_c
+            data:
+              hvac_mode: heat_cool
+      - conditions:
+          - condition: trigger
+            id: TEMP_CHANGED
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ states('sensor.carrier_cartridge_ac_ac_received_mode')
+                      in ['COOL','DRY','AUTO', 'FAN_ONLY'] }}
+                sequence:
+                  - action: climate.set_temperature
+                    target:
+                      entity_id: climate.carrier_cartridge_ac_carrier_cartridge_a_c
+                    data:
+                      temperature: >
+                        {{
+                        states('sensor.carrier_cartridge_ac_ac_received_target_temp')
+                        | float }}
+      - conditions:
+          - condition: trigger
+            id: FAN_CHANGED
+        sequence:
+          - action: climate.set_fan_mode
+            target:
+              entity_id: climate.carrier_cartridge_ac_carrier_cartridge_a_c
+            data:
+              fan_mode: >-
+                {{
+                states('sensor.carrier_cartridge_ac_ac_received_fan_mode')
+                | lower }}
+mode: single

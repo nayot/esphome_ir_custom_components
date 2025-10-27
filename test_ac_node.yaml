@@ -1,41 +1,49 @@
 
 substitutions:
-  device_name: test-ac-node
-  friendly_name: "Test A/C Unit Node"
+  device_name: test-node
+  friendly_name: "Test A/C Node"
 
 esphome:
-  name: ${device_name} 
-
+  name: ${device_name}
+  
 esp8266:
   board: esp01_1m
 
-# Enable logging
 logger:
-  level: DEBUG 
+  level: DEBUG
 
-# Enable Home Assistant API
 api:
   encryption:
-    key: !secret api_key 
+    key: !secret api_key
 
 ota:
-  - platform: esphome
-    password: !secret ota_password 
+  platform: esphome
+  password: !secret ota_password
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  
   ap:
-    ssid: carrier_ac_fallback 
-    password: engbuu2025 
+    ssid: carrier_ac_fallback
+    password: engbuu2025
 
 captive_portal:
 
+external_components:
+  - source: ./custom_components
+    components: [carrier_cartridge_rx]
+
 binary_sensor:
   - platform: status
-    name: ${device_name}
+    name: ${device_name} Status
+
+sensor:
+  - platform: wifi_signal
+    name: "${friendly_name} WiFi Strength"
+    update_interval: 300s
+  - platform: uptime
+    name: "${friendly_name} Uptime"
 
 remote_receiver:
   id: rcvr
@@ -47,34 +55,46 @@ remote_receiver:
       pullup: true
   tolerance: 60%
   dump: raw
+  idle: 60ms
 
 remote_transmitter:
   id: transmitter
   pin: GPIO4
   carrier_duty_percent: 50%
 
-sensor:
-  - platform: wifi_signal
-    name: "WiFi Strength"
-    update_interval: 300s
-  - platform: uptime
-    name: "Uptime"
-
-
-### Custom components
-# external_components:
-#   - source:
-#       type: git
-#       url: https://github.com/nayot/esphome_ir_custom_components
-#       path: custom_components
-#       ref: main
-#     components: [ carrier_ac ]
-external_components:
-  - source: ./custom_components
-    components: [ carrier_cartridge_ac ]
+text_sensor:
+  - platform: template
+    id: received_ac_mode
+    name: "AC Received Mode"
+    internal: false
+  - platform: template
+    id: received_ac_fan_mode
+    name: "AC Received Fan Mode"
+    internal: false
+  - platform: template
+    id: received_ac_target_temp
+    name: "AC Received Target Temp"
+    internal: false
+  - platform: template
+    id: received_ac_swing_mode
+    name: "AC Received Swing Mode"
+    internal: false
+  - platform: carrier_cartridge_rx
+    id: custom_ir_receiver_logic
+    receiver_id: rcvr
+    mode_sensor: received_ac_mode
+    fan_mode_sensor: received_ac_fan_mode
+    target_temperature_sensor: received_ac_target_temp
+    swing_mode_sensor: received_ac_swing_mode
 
 climate:
-  - platform: carrier_cartridge_ac
-    name: ${device_name} 
+  - platform: heatpumpir
+    id: carrier_ac_controller
+    name: ${friendly_name}
+    protocol: carrier_nqv 
     transmitter_id: transmitter
-    receiver_id: rcvr
+    min_temperature: 17.0
+    max_temperature: 30.0
+    vertical_default: auto
+    horizontal_default: middle
+
