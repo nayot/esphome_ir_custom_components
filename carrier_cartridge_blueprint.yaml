@@ -1,0 +1,130 @@
+
+blueprint:
+  name: Carrier Cartridge Remote Sync
+  description: >
+    Sync the A/C state from ESPHome IR receiver sensors to a HA climate entity.
+  domain: automation
+
+  input:
+    mode_sensor:
+      name: Mode Sensor
+      selector:
+        entity:
+          domain: text_sensor
+    fan_sensor:
+      name: Fan Sensor
+      selector:
+        entity:
+          domain: text_sensor
+    temp_sensor:
+      name: Temperature Sensor
+      selector:
+        entity:
+          domain: text_sensor
+    climate_entity:
+      name: Climate Entity
+      selector:
+        entity:
+          domain: climate
+
+variables:
+  mode_sensor: !input mode_sensor
+  fan_sensor: !input fan_sensor
+  temp_sensor: !input temp_sensor
+  climate_entity: !input climate_entity
+
+trigger:
+  - platform: state
+    entity_id: !input mode_sensor
+    id: MODE_COOL
+    to: COOL
+  - platform: state
+    entity_id: !input mode_sensor
+    id: MODE_OFF
+    to: "OFF"
+  - platform: state
+    entity_id: !input mode_sensor
+    id: MODE_FAN
+    to: FAN_ONLY
+  - platform: state
+    entity_id: !input mode_sensor
+    id: MODE_DRY
+    to: DRY
+  - platform: state
+    entity_id: !input mode_sensor
+    id: MODE_AUTO
+    to: AUTO
+  - platform: state
+    entity_id: !input temp_sensor
+    id: TEMP_CHANGED
+  - platform: state
+    entity_id: !input fan_sensor
+    id: FAN_CHANGED
+
+condition:
+  - condition: template
+    value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable'] }}"
+  - condition: template
+    value_template: "{{ trigger.to_state.state != trigger.from_state.state }}"
+
+action:
+  - choose:
+      - conditions: "{{ trigger.id == 'MODE_COOL' }}"
+        sequence:
+          - service: climate.set_hvac_mode
+            target:
+              entity_id: !input climate_entity
+            data:
+              hvac_mode: cool
+
+      - conditions: "{{ trigger.id == 'MODE_OFF' }}"
+        sequence:
+          - service: climate.turn_off
+            target:
+              entity_id: !input climate_entity
+
+      - conditions: "{{ trigger.id == 'MODE_FAN' }}"
+        sequence:
+          - service: climate.set_hvac_mode
+            target:
+              entity_id: !input climate_entity
+            data:
+              hvac_mode: fan_only
+
+      - conditions: "{{ trigger.id == 'MODE_DRY' }}"
+        sequence:
+          - service: climate.set_hvac_mode
+            target:
+              entity_id: !input climate_entity
+            data:
+              hvac_mode: dry
+
+      - conditions: "{{ trigger.id == 'MODE_AUTO' }}"
+        sequence:
+          - service: climate.set_hvac_mode
+            target:
+              entity_id: !input climate_entity
+            data:
+              hvac_mode: heat_cool
+
+      - conditions: "{{ trigger.id == 'TEMP_CHANGED' }}"
+        sequence:
+          - choose:
+              - conditions: >
+                  {{ states(mode_sensor) in ['COOL', 'DRY', 'AUTO', 'FAN_ONLY'] }}
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      temperature: "{{ states(temp_sensor) | float(25) }}"
+
+      - conditions: "{{ trigger.id == 'FAN_CHANGED' }}"
+        sequence:
+          - service: climate.set_fan_mode
+            target:
+              entity_id: !input climate_entity
+            data:
+              fan_mode: "{{ states(fan_sensor) | lower }}"
+
+mode: single
