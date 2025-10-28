@@ -1,0 +1,73 @@
+
+blueprint:
+  name: A/C Post-Shutdown Fan Cool-Down
+  description: >
+    When the A/C turns off manually or after cooling,
+    switch to fan-only high speed for a duration, then turn off completely.
+  domain: automation
+
+  input:
+    climate_entity:
+      name: Air Conditioner (climate entity)
+      selector:
+        entity:
+          domain: climate
+    high_fan_mode:
+      name: High Fan Mode Name
+      description: >
+        The name of the "high" fan speed as reported by your A/C entity
+        (e.g. 'high', 'max', 'strong'). Case-insensitive.
+      default: "high"
+    cooldown_duration:
+      name: Fan-Only Duration
+      description: Duration to run the fan before turning off.
+      default: 15
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: minutes
+          mode: box
+
+variables:
+  climate_entity: !input climate_entity
+  high_fan_mode: !input high_fan_mode
+  cooldown_duration: !input cooldown_duration
+
+trigger:
+  - platform: state
+    entity_id: !input climate_entity
+    to: "off"
+
+condition:
+  - alias: "Run only if previous mode was active cooling/drying/etc."
+    condition: template
+    value_template: >
+      {{ trigger.from_state is not none and
+         trigger.from_state.state in ['cool','dry','heat_cool','heat','auto'] }}
+
+action:
+  - alias: "Switch to fan-only mode"
+    service: climate.set_hvac_mode
+    target:
+      entity_id: "{{ climate_entity }}"
+    data:
+      hvac_mode: fan_only
+
+  - alias: "Set fan speed to high"
+    service: climate.set_fan_mode
+    target:
+      entity_id: "{{ climate_entity }}"
+    data:
+      fan_mode: "{{ high_fan_mode | lower }}"
+
+  - alias: "Wait for cooldown period"
+    delay:
+      minutes: "{{ cooldown_duration | int }}"
+
+  - alias: "Turn off the A/C after cooldown"
+    service: climate.turn_off
+    target:
+      entity_id: "{{ climate_entity }}"
+
+mode: restart
