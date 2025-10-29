@@ -60,16 +60,20 @@ sensor:
 
 
 ### Custom components
+# external_components:
+#   - source:
+#       type: git
+#       url: https://github.com/nayot/esphome_ir_custom_components
+#       path: custom_components
+#       ref: main
+#     components: [ saijo_ac ]
+
 external_components:
-  - source:
-      type: git
-      url: https://github.com/nayot/esphome_ir_custom_components
-      path: custom_components
-      ref: main
-    components: [ carrier_ac ]
+  - source: ./custom_components
+    components: [ saijo_ac ]
 
 climate:
-  - platform: carrier_ac
+  - platform: saijo_ac 
     name: ${device_name} 
     transmitter_id: transmitter
     receiver_id: rcvr
