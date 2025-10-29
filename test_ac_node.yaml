@@ -54,7 +54,7 @@ remote_receiver:
       input: true
       pullup: true
   tolerance: 60%
-  dump: raw
+  dump: all
   idle: 60ms
 
 remote_transmitter:
