@@ -63,65 +63,67 @@ static const uint64_t CODE_FAN_ONLY_MEDIUM = 0x2829000000a90106ULL;
 static const uint64_t CODE_FAN_ONLY_HIGH = 0x2819000000b90205ULL;
 static const uint64_t CODE_FAN_ONLY_AUTO= 0x2819000000b90205ULL;
 
+
 // ======================================================================
-// ===                NEW ENCODER / DECODER FUNCTIONS                 ===
+// ===        NEW 9-BYTE ENCODER / DECODER (147 elements total)       ===
 // ======================================================================
 
 /**
- * @brief Decodes raw IR timings into a 64-bit integer.
+ * @brief Decode raw IR timings into 9 bytes (72 bits)
  */
-static std::optional<uint64_t> decode_to_uint64(remote_base::RemoteReceiveData data) {
-  if (data.size() < 131) {
-    return std::nullopt;
-  }
+static std::optional<std::vector<uint8_t>> decode_to_bytes(remote_base::RemoteReceiveData data) {
+  if (data.size() < 147) return std::nullopt;
 
-  uint64_t decoded_data = 0;
-  int bit_count = 0;
+  std::vector<uint8_t> bytes(9, 0);
+  int bit_index = 0;
 
-  for (size_t i = 2; i < data.size() - 1 && bit_count < 64; i += 2) {
+  for (size_t i = 2; i < data.size() - 1 && bit_index < 72; i += 2) {
     int32_t space_duration = std::abs(data[i + 1]);
-    decoded_data <<= 1;
+    bool bit = (space_duration >= SPACE_ONE_MIN_US);
 
-    if (space_duration >= SPACE_ONE_MIN_US) {
-      decoded_data |= 1;
-    } else if (space_duration < SPACE_ZERO_MAX_US) {
-      // It's a '0' bit.
-    } else {
-      ESP_LOGW(TAG, "Ambiguous space timing at index %d: %d", (int)i + 1, space_duration);
-      return std::nullopt;
-    }
-    bit_count++;
+    size_t byte_index = bit_index / 8;
+    bytes[byte_index] <<= 1;
+    bytes[byte_index] |= bit ? 1 : 0;
+
+    bit_index++;
   }
 
-  if (bit_count == 64) {
-    return decoded_data;
-  }
+  // Final left shift for incomplete byte
+  int remaining = 8 - (bit_index % 8);
+  if (remaining != 8) bytes[bit_index / 8] <<= remaining;
+
+  if (bit_index == 72) return bytes;
   return std::nullopt;
 }
 
 /**
- * @brief Encodes a 64-bit hex code into a raw IR timing vector.
+ * @brief Encode 9 bytes (72 bits) into raw IR pulse/space durations.
  */
-static std::vector<int32_t> encode_hex_to_raw(uint64_t hex_data) {
-  std::vector<int32_t> raw_data;
-  raw_data.reserve(131);
+static std::vector<int32_t> encode_bytes_to_raw(const std::vector<uint8_t> &bytes) {
+  std::vector<int32_t> raw;
+  raw.reserve(147);
 
-  raw_data.push_back(HEADER_PULSE_US);
-  raw_data.push_back(HEADER_SPACE_US);
+  raw.push_back(HEADER_PULSE_US);
+  raw.push_back(HEADER_SPACE_US);
 
-  for (int i = 63; i >= 0; i--) {
-    raw_data.push_back(PULSE_DURATION_US);
-    if ((hex_data >> i) & 1) {
-      raw_data.push_back(SPACE_ONE_US);
-    } else {
-      raw_data.push_back(SPACE_ZERO_US);
+  for (uint8_t b : bytes) {
+    for (int i = 7; i >= 0; i--) {
+      raw.push_back(PULSE_DURATION_US);
+      raw.push_back(((b >> i) & 1) ? SPACE_ONE_US : SPACE_ZERO_US);
     }
   }
-  
-  raw_data.push_back(FINAL_PULSE_US);
-  return raw_data;
+
+  raw.push_back(FINAL_PULSE_US);
+  return raw;
 }
 
+/**
+ * @brief Transmit 9-byte sequence.
+ */
+void SaijoACClimate::transmit_hex_9b(const std::vector<uint8_t> &bytes) {
+  std::vector<int32_t> raw_vector = encode_bytes_to_raw(bytes);
+  this->transmit_raw_code_(raw_vector.data(), raw_vector.size());
+}
 
 // ======================================================================
 // ===                CLIMATE COMPONENT FUNCTIONS                     ===
@@ -208,10 +210,14 @@ void SaijoACClimate::transmit_raw_code_(const int32_t *data, size_t len) {
  * @brief This is our NEW hex helper function.
  * It converts hex to raw, then calls your working transmit_raw_code_ function.
  */
-void SaijoACClimate::transmit_hex(uint64_t hex_data) {
-  std::vector<int32_t> raw_vector = encode_hex_to_raw(hex_data);
-  // Call your original, working function with the new data
-  this->transmit_raw_code_(raw_vector.data(), raw_vector.size());
+
+ void SaijoACClimate::transmit_hex(uint64_t hex_data) {
+  // Convert 8-byte hex_data to 9-byte vector with 0x00 padding at end
+  std::vector<uint8_t> bytes(9, 0);
+  for (int i = 0; i < 8; i++) {
+    bytes[i] = (hex_data >> ((8 - 1 - i) * 8)) & 0xFF;
+  }
+  this->transmit_hex_9b(bytes);
 }
 
 /**
@@ -318,94 +324,77 @@ void SaijoACClimate::control(const climate::ClimateCall &call) {
  * @brief Receive and decode an IR command.
  * This is now updated to decode hex and use the smart logic.
  */
+
 bool SaijoACClimate::on_receive(remote_base::RemoteReceiveData data) {
-  // Try to decode the raw data into our 64-bit hex format
-  auto decoded_hex = decode_to_uint64(data);
+  // Decode 9 bytes instead of 8
+  auto decoded = decode_to_bytes(data);
+  if (!decoded.has_value()) return false;
 
-  if (!decoded_hex.has_value()) {
-    return false; // Not a valid saijo 64-bit code
-  }
+  const auto &bytes = decoded.value();
+  if (bytes.size() < 9) return false;
 
-  uint64_t hex_code = decoded_hex.value();
-  ESP_LOGD(TAG, "Received IR code. HEX: 0x%016llX", hex_code);
+  // Directly index the 9 bytes
+  const uint8_t b0 = bytes[0];
+  const uint8_t b1 = bytes[1];
+  const uint8_t b2 = bytes[2];
+  const uint8_t b3 = bytes[3];
+  const uint8_t b4 = bytes[4];
+  const uint8_t b5 = bytes[5];
+  const uint8_t b6 = bytes[6];
+  const uint8_t b7 = bytes[7];
+  const uint8_t b8 = bytes[8];  // new 9th byte
 
-  // Get B0 (Byte 0, MSB) and B1 (Byte 1)
-  uint8_t b0 = (hex_code >> 56) & 0xFF;
-  uint8_t b1 = (hex_code >> 48) & 0xFF;
+  ESP_LOGI(TAG, "RX bytes: %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+           b0,b1,b2,b3,b4,b5,b6,b7,b8);
 
-  // --- Rule 1: Check Power (B0) ---
-  if (b0 == 0x20) {
-    ESP_LOGD(TAG, "Matched OFF code (B0=0x20)");
+  // --- OFF detection (observed OFF: A0 00 B2 01 09 09 09 00, accept any with b1==00)
+  if (b1 == 0x00) {
     this->mode = climate::CLIMATE_MODE_OFF;
+    this->target_temperature = 15.0f + ((b2 - 0x9E) / 2.0f);
+    this->fan_mode = climate::CLIMATE_FAN_AUTO;
     this->publish_state();
+    ESP_LOGI(TAG, "RX OFF: temp=%.1f", this->target_temperature);
     return true;
   }
 
-  if (b0 != 0x28) {
-    ESP_LOGW(TAG, "Received code, but not ON or OFF (B0=0x%02X)", b0);
-    return false; // Not an ON code, ignore
+  if (b1 != 0x90) return false;  // not an ON frame we recognize
+
+  // Common fields
+  this->target_temperature = 15.0f + ((b2 - 0x9E) / 2.0f);
+
+  // --- Robust mode resolution ---
+  const bool b4_plus40 = (b4 & 0x40) != 0;
+  const bool b6_plus40 = (b6 & 0x40) != 0;
+
+  if ( b4_plus40 && !b6_plus40)      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
+  else if (!b4_plus40 &&  b6_plus40) this->mode = climate::CLIMATE_MODE_DRY;
+  else                                this->mode = climate::CLIMATE_MODE_COOL;
+
+  // --- Fan speed ---
+  const uint8_t fan_code = (b3 >> 4) & 0x0F;
+  switch (fan_code) {
+    case 0x2: this->fan_mode = climate::CLIMATE_FAN_LOW;    break;
+    case 0x6: this->fan_mode = climate::CLIMATE_FAN_MEDIUM; break;
+    case 0x8: this->fan_mode = climate::CLIMATE_FAN_HIGH;   break;
+    default:  this->fan_mode = climate::CLIMATE_FAN_AUTO;   break;
   }
 
-  // --- At this point, we know B0 == 0x28 (Power is ON) ---
-  ESP_LOGD(TAG, "Matched ON code (B0=0x28). B1=0x%02X", b1);
-
-  // --- Rule 2: Get Mode & Fan from B1 High Nibble ---
-  uint8_t b1_high_nibble = (b1 >> 4) & 0x0F;
-  
-  switch (b1_high_nibble) {
-    case 0x1:
-      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
-      this->fan_mode = climate::CLIMATE_FAN_HIGH;
-      break;
-    case 0x2:
-      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
-      this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-      break;
-    case 0x3:
-      this->mode = climate::CLIMATE_MODE_FAN_ONLY;
-      this->fan_mode = climate::CLIMATE_FAN_LOW;
-      break;
-    case 0x4:
-      this->mode = climate::CLIMATE_MODE_COOL;
-      this->fan_mode = climate::CLIMATE_FAN_AUTO;
-      break;
-    case 0x5:
-      this->mode = climate::CLIMATE_MODE_COOL;
-      this->fan_mode = climate::CLIMATE_FAN_HIGH;
-      break;
-    case 0x6:
-      this->mode = climate::CLIMATE_MODE_COOL;
-      this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
-      break;
-    case 0x7:
-      this->mode = climate::CLIMATE_MODE_COOL;
-      this->fan_mode = climate::CLIMATE_FAN_LOW;
-      break;
-    case 0xB:
-      this->mode = climate::CLIMATE_MODE_DRY;
-      this->fan_mode = climate::CLIMATE_FAN_AUTO; // DRY mode fan is usually fixed
-      break;
-    default:
-      ESP_LOGW(TAG, "Unknown B1 High Nibble: 0x%X", b1_high_nibble);
-      return false; // Unrecognized mode
+  // --- Swing decode (vertical) from B5 high nibble ---
+  const uint8_t swing_high = (b5 >> 4) & 0x0F;
+  if (swing_high == 0x0) {
+    this->swing_level_ = 0;  // swing on
+  } else if (swing_high >= 0x2 && swing_high <= 0xA && (swing_high % 2 == 0)) {
+    this->swing_level_ = static_cast<int>((swing_high - 0x2) / 2 + 1);
   }
 
-  // --- Rule 3: Get Temperature from B1 Low Nibble ---
-  // This only applies if we are NOT in FAN_ONLY mode
-  if (this->mode == climate::CLIMATE_MODE_COOL || this->mode == climate::CLIMATE_MODE_DRY) {
-    uint8_t b1_low_nibble = b1 & 0x0F;
-    this->target_temperature = 15.0f + b1_low_nibble;
-    ESP_LOGD(TAG, "Decoded: Mode: %d, Fan: %d, Temp: %.1f", this->mode, this->fan_mode, this->target_temperature);
-  } else {
-    // FAN_ONLY mode, temperature is irrelevant
-    ESP_LOGD(TAG, "Decoded: Mode: %d, Fan: %d", this->mode, this->fan_mode);
-  }
+  ESP_LOGI(TAG,
+           "RX ON: mode=%d, temp=%.1f, fan=%d, swing=%d (b4=0x%02X, b6=0x%02X, b3=0x%02X, b5=0x%02X, b8=0x%02X)",
+           this->mode, this->target_temperature, this->fan_mode, this->swing_level_,
+           b4, b6, b3, b5, b8);
 
-  // Publish the new state
   this->publish_state();
   return true;
 }
-
 
 }  // namespace saijo_ac
 }  // namespace esphome

@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include "esphome/core/component.h"
@@ -5,57 +6,49 @@
 #include "esphome/components/remote_transmitter/remote_transmitter.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/remote_receiver/remote_receiver.h"
-// --- New Includes for Hex support ---
 #include "esphome/core/log.h"
-#include <string>
-#include <vector>
-#include <sstream>
-#include <iomanip>
+
 #include <cstdint>
 #include <optional>
-// --- End New Includes ---
+#include <vector>
 
 namespace esphome {
 namespace saijo_ac {
 
-class SaijoACClimate : public climate::Climate, public Component,
-                         public remote_base::RemoteReceiverListener {
+class SaijoACClimate : public climate::Climate,
+                       public Component,
+                       public remote_base::RemoteReceiverListener {
  public:
-  // --- Setter functions (Unchanged) ---
+  // Wiring
   void set_transmitter(remote_transmitter::RemoteTransmitterComponent *transmitter) {
     this->transmitter_ = transmitter;
   }
   void set_sensor(sensor::Sensor *sensor) { this->sensor_ = sensor; }
 
-  // --- Overridden functions (Unchanged)---
+  // Virtuals required by ESPHome
   climate::ClimateTraits traits() override;
   void control(const climate::ClimateCall &call) override;
   void setup() override;
   void dump_config() override;
   bool on_receive(remote_base::RemoteReceiveData data) override;
 
+  // Ensure vtable is emitted in this TU
+  virtual ~SaijoACClimate();
 
  protected:
-  // --- Helper Functions (MODIFIED) ---
-  
-  // This is our new helper function
+  // TX helpers
   void transmit_hex(uint64_t hex_data);
-
-  void transmit_hex_9b(const std::vector<uint8_t> &bytes);
-  
-  // This function is still used by transmit_hex
   void transmit_raw_code_(const int32_t *data, size_t len);
-  
-  // These are no longer needed
-  // void send_ir_code_();
-  // bool compare_raw_code_(...);
 
+  // Internal rolling sequence nibble (0..15), default 0x5 per your captures
+  uint8_t seq_{0x05};
 
-  // --- Member Variables (Unchanged) ---
+  // We keep swing as “auto swing” (0) unless you later expose it to HA UI
+  int swing_level_{0};  // 0 = swing ON, 1..5 = fixed levels
+
   remote_transmitter::RemoteTransmitterComponent *transmitter_{nullptr};
   sensor::Sensor *sensor_{nullptr};
-  int swing_level_{0};
 };
 
-}  // namespace Saijo_ac
+}  // namespace saijo_ac
 }  // namespace esphome
