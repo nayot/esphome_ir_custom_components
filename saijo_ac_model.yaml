@@ -1,9 +1,9 @@
 substitutions:
-  device_name: saijo-ac
-  friendly_name: "Saijo Denki A/C Model"
+  device_name: saijo_ac
+
 esphome:
   name: ${device_name}
-  friendly_name: ${friendly_name} 
+  name_add_mac_suffix: true
 
 esp8266:
   board: esp01_1m
@@ -44,7 +44,7 @@ remote_receiver:
       input: true
       pullup: true
   tolerance: 60%
-  dump: raw
+  # dump: raw
 
 remote_transmitter:
   id: transmitter
