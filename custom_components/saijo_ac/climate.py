@@ -1,17 +1,10 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import (
-    climate,
-    remote_transmitter,
-    sensor,
-    remote_receiver,
-    remote_base,
+from esphome.components import climate, remote_transmitter, sensor, remote_receiver, remote_base
+from esphome.const import (
+    CONF_ID,
+    CONF_SENSOR,
 )
-from esphome.const import CONF_ID, CONF_SENSOR
-
-# Make sure these dependencies are prepared before our component
-DEPENDENCIES = ["remote_transmitter", "remote_receiver"]
-AUTO_LOAD = ["climate"]
 
 CONF_RECEIVER_ID = "receiver_id"
 
@@ -21,7 +14,7 @@ SaijoACClimate = saijo_ac_ns.class_(
     "SaijoACClimate",
     climate.Climate,
     cg.Component,
-    remote_base.RemoteReceiverListener,
+    remote_base.RemoteReceiverListener # Correct inheritance
 )
 
 CONFIG_SCHEMA = climate.climate_schema(SaijoACClimate).extend(
@@ -43,13 +36,17 @@ async def to_code(config):
     await cg.register_component(var, config)
     await climate.register_climate(var, config)
 
-    tx = await cg.get_variable(config[remote_transmitter.CONF_TRANSMITTER_ID])
-    cg.add(var.set_transmitter(tx))
+    transmitter = await cg.get_variable(config[remote_transmitter.CONF_TRANSMITTER_ID])
+    cg.add(var.set_transmitter(transmitter))
 
     if CONF_SENSOR in config:
         sens = await cg.get_variable(config[CONF_SENSOR])
         cg.add(var.set_sensor(sens))
 
+    # --- THIS BLOCK CHANGES ---
     if CONF_RECEIVER_ID in config:
-        rcvr = await cg.get_variable(config[CONF_RECEIVER_ID])
-        cg.add(rcvr.register_listener(var))
+        receiver = await cg.get_variable(config[CONF_RECEIVER_ID])
+        # --- FIX: Use register_listener instead ---
+        cg.add(receiver.register_listener(var))
+        # --- END FIX ---
+    # --- END CHANGE ---
