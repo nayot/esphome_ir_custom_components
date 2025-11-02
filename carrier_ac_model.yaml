@@ -1,10 +1,11 @@
 substitutions:
-  device_name: dean-secretary-ac
-  friendly_name: Dean Secretary's A/C
+  device_name: carrier-ac
+  friendly_name: "Carrier A/C"
 
 esphome:
   name: ${device_name}
   friendly_name: ${friendly_name} 
+  name_add_mac_suffix: true
 
 esp8266:
   board: esp01_1m
@@ -31,6 +32,15 @@ wifi:
     password: !secret ap_password
 
 captive_portal:
+
+text_sensor:
+  - platform: version
+    name: "Firmware Version"
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    mac_address:
+      name: "Device MAC"
 
 binary_sensor:
   - platform: status

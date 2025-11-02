@@ -4,6 +4,9 @@ substitutions:
 
 esphome:
   name: ${device_name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
+  comment: "Carrier Cartridge A/C IR Controller"
   
 esp8266:
   board: esp01_1m
@@ -62,6 +65,13 @@ remote_transmitter:
   carrier_duty_percent: 50%
 
 text_sensor:
+  - platform: version
+    name: "Firmware Version"
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    mac_address:
+      name: "Device MAC"
   - platform: template
     id: received_ac_mode
     name: "AC Received Mode"

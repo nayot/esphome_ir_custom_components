@@ -1,9 +1,12 @@
 substitutions:
   device_name: saijo-ac
+  friendly_name: "Saijo Denki A/C"
 
 esphome:
   name: ${device_name}
+  friendly_name: ${friendly_name}
   name_add_mac_suffix: true
+  comment: "Saijo A/C IR Controller"
 
 esp8266:
   board: esp01_1m
@@ -34,6 +37,15 @@ captive_portal:
 binary_sensor:
   - platform: status
     name: ${device_name}
+
+text_sensor:
+  - platform: version
+    name: "Firmware Version"
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    mac_address:
+      name: "Device MAC"
 
 remote_receiver:
   id: rcvr
