@@ -1,0 +1,93 @@
+substitutions:
+  device_name: remote_reader
+  friendly_name: "Infrared Remote Reader"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
+  comment: "Infrared Remote Reader"
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key 
+
+ota:
+  - platform: esphome
+    password: !secret ota_password 
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: ${device_name} 
+    password: !secret ap_password
+
+captive_portal:
+
+binary_sensor:
+  - platform: status
+    name: ${device_name}
+
+text_sensor:
+  - platform: version
+    name: "Firmware Version"
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    mac_address:
+      name: "Device MAC"
+
+remote_receiver:
+  id: rcvr
+  pin:
+    number: GPIO14
+    inverted: true
+    mode:
+      input: true
+      pullup: true
+  tolerance: 60%
+  dump: raw
+
+remote_transmitter:
+  id: transmitter
+  pin: GPIO4
+  carrier_duty_percent: 50%
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Strength"
+    update_interval: 300s
+  - platform: uptime
+    name: "Uptime"
+
+
+### Custom components
+# external_components:
+#   - source:
+#       type: git
+#       url: https://github.com/nayot/esphome_ir_custom_components
+#       path: custom_components
+#       ref: main
+#     components: [ saijo_ac ]
+
+external_components:
+  - source: ./custom_components
+    components: [ remote_reader ] 
+
+
+climate:
+  - platform: remote_reader
+    name: ${device_name} 
+    transmitter_id: transmitter
+    receiver_id: rcvr
+

@@ -1,10 +1,10 @@
 
-#include "saijo_ac.h"
+#include "remote_reader_ac.h"
 
 namespace esphome {
-namespace saijo_ac {
+namespace remote_reader_ac {
 
-static const char *const TAG = "saijo_ac.climate";
+static const char *const TAG = "remote_reader_ac.climate";
 
 // ======================================================================
 // ===               IR PROTOCOL TIMING DEFINITIONS                   ===
@@ -96,7 +96,7 @@ static std::vector<int32_t> encode_bytes_to_raw(const std::array<uint8_t,9> &byt
 // ======================================================================
 // ===                     TRANSMIT FUNCTIONS                         ===
 // ======================================================================
-void SaijoACClimate::transmit_hex_9b(const std::array<uint8_t,9> &bytes) {
+void RemoteReaderACClimate::transmit_hex_9b(const std::array<uint8_t,9> &bytes) {
   if (!this->transmitter_) {
     ESP_LOGE(TAG, "Transmitter not configured!");
     return;
@@ -112,18 +112,18 @@ void SaijoACClimate::transmit_hex_9b(const std::array<uint8_t,9> &bytes) {
 // ======================================================================
 // ===                     CLIMATE FUNCTIONS                          ===
 // ======================================================================
-void SaijoACClimate::setup() {
+void RemoteReaderACClimate::setup() {
   this->mode = climate::CLIMATE_MODE_OFF;
   this->target_temperature = 25.0f;
   this->fan_mode = climate::CLIMATE_FAN_AUTO;
 }
 
-void SaijoACClimate::dump_config() {
-  ESP_LOGCONFIG(TAG, "Saijo AC Climate:");
-  LOG_CLIMATE("", "Saijo AC", this);
+void RemoteReaderACClimate::dump_config() {
+  ESP_LOGCONFIG(TAG, "RemoteReader AC Climate:");
+  LOG_CLIMATE("", "RemoteReader AC", this);
 }
 
-climate::ClimateTraits SaijoACClimate::traits() {
+climate::ClimateTraits RemoteReaderACClimate::traits() {
   climate::ClimateTraits traits;
   traits.set_supports_current_temperature(false);
   traits.set_supported_modes({
@@ -144,7 +144,7 @@ climate::ClimateTraits SaijoACClimate::traits() {
   return traits;
 }
 
-void SaijoACClimate::control(const climate::ClimateCall &call) {
+void RemoteReaderACClimate::control(const climate::ClimateCall &call) {
   if (call.get_mode().has_value()) this->mode = *call.get_mode();
   if (call.get_target_temperature().has_value()) this->target_temperature = *call.get_target_temperature();
   if (call.get_fan_mode().has_value()) this->fan_mode = *call.get_fan_mode();
@@ -226,7 +226,7 @@ void SaijoACClimate::control(const climate::ClimateCall &call) {
 // ===                     RECEIVE FUNCTIONS                          ===
 // ======================================================================
 
-bool SaijoACClimate::on_receive(remote_base::RemoteReceiveData data) {
+bool RemoteReaderACClimate::on_receive(remote_base::RemoteReceiveData data) {
   // Decode 9 bytes instead of 8
   auto decoded = decode_to_bytes(data);
   if (!decoded.has_value()) return false;
@@ -299,5 +299,5 @@ bool SaijoACClimate::on_receive(remote_base::RemoteReceiveData data) {
   this->publish_state();
   return true;
 }
-}  // namespace saijo_ac
+}  // namespace remote_reader_ac
 }  // namespace esphome

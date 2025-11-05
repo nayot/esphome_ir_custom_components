@@ -16,9 +16,9 @@
 #include <optional>
 
 namespace esphome {
-namespace saijo_ac {
+namespace remote_reader_ac {
 
-class SaijoACClimate : public climate::Climate,
+class RemoteReaderACClimate : public climate::Climate,
                        public Component,
                        public remote_base::RemoteReceiverListener {
  public:
@@ -44,5 +44,5 @@ class SaijoACClimate : public climate::Climate,
   int swing_level_{0};
 };
 
-}  // namespace saijo_ac
+}  // namespace remote_reader_ac
 }  // namespace esphome

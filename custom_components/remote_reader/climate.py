@@ -8,16 +8,16 @@ from esphome.const import (
 
 CONF_RECEIVER_ID = "receiver_id"
 
-saijo_ac_ns = cg.esphome_ns.namespace("saijo_ac")
+remote_reader_ac_ns = cg.esphome_ns.namespace("remote_reader_ac")
 
-SaijoACClimate = saijo_ac_ns.class_(
-    "SaijoACClimate",
+Remote_readerACClimate = remote_reader_ac_ns.class_(
+    "Remote_readerACClimate",
     climate.Climate,
     cg.Component,
     remote_base.RemoteReceiverListener # Correct inheritance
 )
 
-CONFIG_SCHEMA = climate.climate_schema(SaijoACClimate).extend(
+CONFIG_SCHEMA = climate.climate_schema(Remote_readerACClimate).extend(
     {
         cv.Required(remote_transmitter.CONF_TRANSMITTER_ID): cv.use_id(
             remote_transmitter.RemoteTransmitterComponent
