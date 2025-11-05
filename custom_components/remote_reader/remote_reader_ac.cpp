@@ -130,13 +130,21 @@ bool RemoteReaderACClimate::on_receive(remote_base::RemoteReceiveData data) {
   const auto &bytes = decoded.value();
   if (bytes.empty()) return false;
 
+  // Print the received bytes as HEX
   std::ostringstream oss;
   for (uint8_t b : bytes)
     oss << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
         << static_cast<int>(b) << " ";
   ESP_LOGI(TAG, "RX bytes (%d): %s", (int)bytes.size(), oss.str().c_str());
 
-  // --- Example Mitsubishi decode preview ---
+  // --- Wait 2 seconds before retransmitting ---
+  ESP_LOGI(TAG, "Waiting 2 seconds before retransmit...");
+  delay(2000);
+
+  // --- Transmit the same code back out ---
+  this->transmit_hex(bytes);
+
+  // --- Optional simple mode preview (for log only) ---
   if (bytes.size() >= 3) {
     const uint8_t b1 = bytes[1];
     const uint8_t b2 = bytes[2];
@@ -149,6 +157,7 @@ bool RemoteReaderACClimate::on_receive(remote_base::RemoteReceiveData data) {
     }
     this->publish_state();
   }
+
   return true;
 }
 
