@@ -56,7 +56,7 @@ remote_receiver:
       input: true
       pullup: true
   tolerance: 60%
-  # dump: raw
+  dump: raw
 
 remote_transmitter:
   id: transmitter
@@ -80,13 +80,14 @@ sensor:
 #       ref: main
 #     components: [ saijo_ac ]
 
-# external_components:
-#   - source: ./custom_components
-#     components: [ saijo_ac ]
+external_components:
+  - source: ./custom_components
+    components: [ mitsubishi_ac ]
+
 
 climate:
-  - platform: mitsubishi 
-    name: ${device_name}
+  - platform: mitsubishi_ac 
+    name: ${device_name} 
     transmitter_id: transmitter
     receiver_id: rcvr
 
