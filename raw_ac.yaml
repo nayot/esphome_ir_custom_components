@@ -1,12 +1,12 @@
 substitutions:
-  device_name: mitsubishi-ac
-  friendly_name: "Mitsubishi A/C"
+  device_name: raw-ac
+  friendly_name: "Raw A/C"
 
 esphome:
   name: ${device_name}
   friendly_name: ${friendly_name}
   name_add_mac_suffix: true
-  comment: "Mitsubishi A/C IR Controller"
+  comment: "Raw A/C IR Controller"
 
 esp8266:
   board: esp01_1m
@@ -56,7 +56,7 @@ remote_receiver:
       input: true
       pullup: true
   tolerance: 60%
-  # dump: raw
+  dump: raw
 
 remote_transmitter:
   id: transmitter
@@ -82,12 +82,12 @@ sensor:
 
 external_components:
   - source: ./custom_components
-    components: [ mitsubishi_ac ]
+    components: [ raw_ac ]
 
 
 climate:
-  - platform: mitsubishi_ac 
+  - platform: raw_ac 
     name: ${device_name} 
     transmitter_id: transmitter
-    receiver_id: rcvr
+    # receiver_id: rcvr
 

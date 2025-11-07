@@ -18,6 +18,12 @@ blueprint:
         The name of the "high" fan speed as reported by your A/C entity
         (e.g. 'high', 'max', 'strong'). Case-insensitive.
       default: "high"
+    auto_fan_mode:
+      name: Auto Fan Mode Name
+      description: >
+        The name of the "auto" fan speed as reported by your A/C entity
+        (e.g. 'high', 'max', 'strong'). Case-insensitive.
+      default: "auto"
     cooldown_duration:
       name: Fan-Only Duration
       description: Duration to run the fan before turning off.
@@ -33,6 +39,7 @@ variables:
   climate_entity: !input climate_entity
   high_fan_mode: !input high_fan_mode
   cooldown_duration: !input cooldown_duration
+  auto_fan_mode: !input auto_fan_mode
 
 trigger:
   - platform: state
@@ -65,6 +72,13 @@ action:
     delay:
       minutes: "{{ cooldown_duration | int }}"
 
+  - alias: "Set fan speed to auto"
+    service: climate.set_fan_mode
+    target:
+      entity_id: "{{ climate_entity }}"
+    data:
+      fan_mode: "{{ auto_fan_mode | lower }}"
+  
   - alias: "Turn off the A/C after cooldown"
     service: climate.turn_off
     target:

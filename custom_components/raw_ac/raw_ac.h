@@ -4,44 +4,43 @@
 #include "esphome/components/climate/climate.h"
 #include "esphome/components/remote_transmitter/remote_transmitter.h"
 #include "esphome/components/sensor/sensor.h"
-#include "esphome/components/remote_receiver/remote_receiver.h"
-#include "esphome/core/log.h"
-
-#include <array>
-#include <vector>
-#include <string>
-#include <sstream>
-#include <iomanip>
-#include <cstdint>
-#include <optional>
 
 namespace esphome {
-namespace mitsubishi_ac {
+namespace raw_ac {
 
-class MitsubishiACClimate : public climate::Climate,
-                       public Component,
-                       public remote_base::RemoteReceiverListener {
+class RawACClimate : public climate::Climate, public Component {
  public:
+  // --- Setter functions called by Python ---
   void set_transmitter(remote_transmitter::RemoteTransmitterComponent *transmitter) {
     this->transmitter_ = transmitter;
   }
   void set_sensor(sensor::Sensor *sensor) { this->sensor_ = sensor; }
 
+  // --- Functions we MUST override ---
+  
+  // Defines the capabilities of our component (modes, fans, temps)
   climate::ClimateTraits traits() override;
+
+  // Called by ESPHome whenever the state needs to change
   void control(const climate::ClimateCall &call) override;
+
+  // Standard component functions
   void setup() override;
   void dump_config() override;
-  bool on_receive(remote_base::RemoteReceiveData data) override;
 
  protected:
-  void transmit_hex_variable(const uint8_t *data, size_t len);
+  // --- Our Helper Functions ---
+  
+  // Sends the correct IR code based on the current internal state
+  void send_ir_code_();
+
+  // Helper to physically send the raw code
   void transmit_raw_code_(const int32_t *data, size_t len);
 
-  // --- Members ---
+  // --- Member Variables ---
   remote_transmitter::RemoteTransmitterComponent *transmitter_{nullptr};
   sensor::Sensor *sensor_{nullptr};
-  int swing_level_{0};
 };
 
-}  // namespace mitsubishi_ac
+}  // namespace raw_ac
 }  // namespace esphome

@@ -8,15 +8,24 @@ static const char *const TAG = "remote_reader_ac.climate";
 // ================================================================
 // ===            IR TIMING DEFINITIONS (Mitsubishi)             ===
 // ================================================================
-const uint32_t IR_FREQUENCY = 38000;
-static const int32_t HEADER_PULSE_US = 3400;
-static const int32_t HEADER_SPACE_US = -1700;
-static const int32_t PULSE_DURATION_US = 450;
-static const int32_t SPACE_ZERO_US = -420;
-static const int32_t SPACE_ONE_US = -1270;
-static const int32_t FINAL_PULSE_US = 450;
-static const int32_t SPACE_ONE_MIN_US = 850;
+// const uint32_t IR_FREQUENCY = 38000;
+// static const int32_t HEADER_PULSE_US = 3400;
+// static const int32_t HEADER_SPACE_US = -1700;
+// static const int32_t PULSE_DURATION_US = 450;
+// static const int32_t SPACE_ZERO_US = -420;
+// static const int32_t SPACE_ONE_US = -1270;
+// static const int32_t FINAL_PULSE_US = 450;
+// static const int32_t SPACE_ONE_MIN_US = 850;
 
+static const uint32_t IR_FREQUENCY = 38000;
+static const int32_t HEADER_PULSE_US = 9000;
+static const int32_t HEADER_SPACE_US = -4500;
+static const int32_t PULSE_DURATION_US = 650;
+static const int32_t SPACE_ZERO_US = -500;
+static const int32_t SPACE_ONE_US = -1600;
+static const int32_t FINAL_PULSE_US = 650;
+static const int32_t SPACE_ZERO_MAX_US = 700;
+static const int32_t SPACE_ONE_MIN_US = 1300;
 // ================================================================
 // ===                ENCODE / DECODE HELPERS                    ===
 // ================================================================
