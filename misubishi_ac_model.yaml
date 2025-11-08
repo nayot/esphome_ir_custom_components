@@ -7,18 +7,27 @@ esphome:
   friendly_name: ${friendly_name}
   name_add_mac_suffix: true
   comment: "Mitsubishi A/C IR Controller"
+  platformio_options:
+    build_flags:
+      - "-Os"              # optimize for size
+      - "-ffunction-sections"
+      - "-fdata-sections"
+      - "-Wl,--gc-sections"
+      - "-DNDEBUG"
 
 esp8266:
   board: esp01_1m
 
 # Enable logging
 logger:
+  level: WARN
 
 # Enable Home Assistant API
 api:
   encryption:
     key: !secret api_key 
-
+  reboot_timeout: 0s
+  
 ota:
   - platform: esphome
     password: !secret ota_password 
