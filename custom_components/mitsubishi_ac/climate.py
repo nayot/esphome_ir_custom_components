@@ -14,7 +14,7 @@ MitsubishiACClimate = mitsubishi_ac_ns.class_(
     "MitsubishiACClimate",
     climate.Climate,
     cg.Component,
-    remote_base.RemoteReceiverListener # Correct inheritance
+    remote_base.RemoteReceiverListener,
 )
 
 CONFIG_SCHEMA = climate.climate_schema(MitsubishiACClimate).extend(
@@ -32,7 +32,6 @@ CONFIG_SCHEMA = climate.climate_schema(MitsubishiACClimate).extend(
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-
     await cg.register_component(var, config)
     await climate.register_climate(var, config)
 
@@ -43,10 +42,6 @@ async def to_code(config):
         sens = await cg.get_variable(config[CONF_SENSOR])
         cg.add(var.set_sensor(sens))
 
-    # --- THIS BLOCK CHANGES ---
     if CONF_RECEIVER_ID in config:
         receiver = await cg.get_variable(config[CONF_RECEIVER_ID])
-        # --- FIX: Use register_listener instead ---
         cg.add(receiver.register_listener(var))
-        # --- END FIX ---
-    # --- END CHANGE ---

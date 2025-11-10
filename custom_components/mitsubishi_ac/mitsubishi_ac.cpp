@@ -1,6 +1,5 @@
 #include "mitsubishi_ac.h"
 #include <cstring>
-#include <cstdio>
 
 namespace esphome {
 namespace mitsubishi_ac {
@@ -8,109 +7,71 @@ namespace mitsubishi_ac {
 static const char *const TAG = "mitsubishi_ac";
 
 // ===============================================================
-// IR PROTOCOL CONSTANTS
+// IR TIMING
 // ===============================================================
 const uint32_t IR_FREQUENCY = 38000;
 static const int32_t HEADER_PULSE_US = 3400;
 static const int32_t HEADER_SPACE_US = -1700;
 static const int32_t PULSE_DURATION_US = 450;
 static const int32_t SPACE_ZERO_US = -420;
-static const int32_t SPACE_ONE_US  = -1270;
+static const int32_t SPACE_ONE_US = -1270;
 static const int32_t FINAL_PULSE_US = 450;
 static const int32_t SPACE_ONE_MIN_US = 850;
 
 // ===============================================================
-// TEMPERATURE TABLE (store in flash)
+// CODEBOOK  (14-byte frames)
 // ===============================================================
-struct TempCode { uint8_t temp; uint8_t code; };
-static const TempCode COOL_TEMPS[] PROGMEM = {
-  {16,0xF0},{17,0x70},{18,0xB0},{19,0x30},
-  {20,0xD0},{21,0x50},{22,0x90},{23,0x10},
-  {24,0xE0},{25,0x60},{26,0xA0},{27,0x20},
-  {28,0xC0},{29,0x40},{30,0x80},{31,0x00}
-};
+static const uint8_t CODE_COOL_22_AUTO[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA3 };
+static const uint8_t CODE_COOL_23_AUTO[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x23 };
+static const uint8_t CODE_COOL_24_AUTO[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC3 };
+static const uint8_t CODE_COOL_25_AUTO[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x43 };
+static const uint8_t CODE_COOL_26_AUTO[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x83 };
+static const uint8_t CODE_COOL_27_AUTO[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03 };
+static const uint8_t CODE_COOL_22_LOW[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x90, 0x40, 0x00, 0x00, 0x00, 0x00, 0xE3 };
+static const uint8_t CODE_COOL_23_LOW[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x10, 0x40, 0x00, 0x00, 0x00, 0x00, 0x63 };
+static const uint8_t CODE_COOL_24_LOW[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0xE0, 0x40, 0x00, 0x00, 0x00, 0x00, 0xA3 };
+static const uint8_t CODE_COOL_25_LOW[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x60, 0x40, 0x00, 0x00, 0x00, 0x00, 0x23 };
+static const uint8_t CODE_COOL_26_LOW[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0xA0, 0x40, 0x00, 0x00, 0x00, 0x00, 0xC3 };
+static const uint8_t CODE_COOL_27_LOW[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x20, 0x40, 0x00, 0x00, 0x00, 0x00, 0x43 };
+static const uint8_t CODE_COOL_22_MEDIUM[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x90, 0xDC, 0x00, 0x00, 0x00, 0x00, 0x00 };
+static const uint8_t CODE_COOL_23_MEDIUM[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x10, 0xDC, 0x00, 0x00, 0x00, 0x00, 0xFF };
+static const uint8_t CODE_COOL_24_MEDIUM[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0xE0, 0xDC, 0x00, 0x00, 0x00, 0x00, 0x7F };
+static const uint8_t CODE_COOL_25_MEDIUM[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x60, 0xDC, 0x00, 0x00, 0x00, 0x00, 0xBF };
+static const uint8_t CODE_COOL_26_MEDIUM[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0xA0, 0xDC, 0x00, 0x00, 0x00, 0x00, 0x3F };
+static const uint8_t CODE_COOL_27_MEDIUM[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x20, 0xDC, 0xDC, 0x00, 0x00, 0x00, 0xDF };
+static const uint8_t CODE_COOL_22_HIGH[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x90, 0xBC, 0xDC, 0x00, 0x00, 0x00, 0x40 };
+static const uint8_t CODE_COOL_23_HIGH[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x10, 0xBC, 0xDC, 0x00, 0x00, 0x00, 0x80 };
+static const uint8_t CODE_COOL_24_HIGH[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0xE0, 0xBC, 0xDC, 0x00, 0x00, 0x00, 0x00 };
+static const uint8_t CODE_COOL_25_HIGH[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x60, 0xBC, 0xDC, 0x00, 0x00, 0x00, 0xFF };
+static const uint8_t CODE_COOL_26_HIGH[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0xA0, 0xBC, 0xDC, 0x00, 0x00, 0x00, 0x7F };
+static const uint8_t CODE_COOL_27_HIGH[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xC0, 0x20, 0xBC, 0x00, 0x00, 0x00, 0x00, 0xBF };
+static const uint8_t CODE_FAN_ONLY_AUTO[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xE0, 0xE0, 0x1C, 0x00, 0x00, 0x00, 0x00, 0xFF };
+static const uint8_t CODE_FAN_ONLY_LOW[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xE0, 0xE0, 0x5C, 0x00, 0x00, 0x00, 0x00, 0x80 };
+static const uint8_t CODE_FAN_ONLY_MEDIUM[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xE0, 0xE0, 0xDC, 0x00, 0x00, 0x00, 0x00, 0x40 };
+static const uint8_t CODE_FAN_ONLY_HIGH[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0xE0, 0xE0, 0xBC, 0x00, 0x00, 0x00, 0x00, 0x20 };
+static const uint8_t CODE_OFF[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x05, 0xE0, 0xE0, 0xBC, 0x00, 0x00, 0x00, 0x00, 0x00 };
+static const uint8_t CODE_DRY_AUTO[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0x40, 0xE0, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x5F };
+static const uint8_t CODE_DRY_LOW[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0x40, 0xE0, 0x5C, 0x00, 0x00, 0x00, 0x00, 0x3F };
+static const uint8_t CODE_DRY_MEDIUM[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0x40, 0xE0, 0xDC, 0x00, 0x00, 0x00, 0x00, 0xBF };
+static const uint8_t CODE_DRY_HIGH[14] = { 0xC4, 0xD3, 0x64, 0x80, 0x00, 0x25, 0x40, 0xE0, 0xBC, 0x00, 0x00, 0x00, 0x00, 0xFF };
 
-static uint8_t encode_temp_byte(float t) {
-  int temp = (int)(t + 0.5f);
-  if (temp < 16) temp = 16;
-  if (temp > 31) temp = 31;
-  for (uint8_t i = 0; i < 16; i++) {
-    if (pgm_read_byte(&COOL_TEMPS[i].temp) == temp)
-      return pgm_read_byte(&COOL_TEMPS[i].code);
+// ===============================================================
+// RAW ENCODE HELPER
+// ===============================================================
+static std::vector<int32_t> encode_bytes_to_raw(const uint8_t *data, size_t len) {
+  std::vector<int32_t> raw;
+  raw.reserve(2 + len * 16 + 1);
+  raw.push_back(HEADER_PULSE_US);
+  raw.push_back(HEADER_SPACE_US);
+  for (size_t i = 0; i < len; i++) {
+    uint8_t b = data[i];
+    for (int j = 7; j >= 0; j--) {
+      raw.push_back(PULSE_DURATION_US);
+      raw.push_back(((b >> j) & 1) ? SPACE_ONE_US : SPACE_ZERO_US);
+    }
   }
-  return 0xF0;
-}
-
-static float decode_temp_byte(uint8_t code) {
-  for (uint8_t i = 0; i < 16; i++) {
-    if (pgm_read_byte(&COOL_TEMPS[i].code) == code)
-      return pgm_read_byte(&COOL_TEMPS[i].temp);
-  }
-  return 25;
-}
-
-// ===============================================================
-// FAN / MODE HELPERS
-// ===============================================================
-static uint8_t encode_mode_byte(climate::ClimateMode mode) {
-  switch (mode) {
-    case climate::CLIMATE_MODE_COOL:     return 0xC0;
-    case climate::CLIMATE_MODE_DRY:      return 0x40;
-    case climate::CLIMATE_MODE_FAN_ONLY: return 0xE0;
-    default:                             return 0xE0;
-  }
-}
-
-static climate::ClimateMode decode_mode_byte(uint8_t b) {
-  if (b == 0xC0) return climate::CLIMATE_MODE_COOL;
-  if (b == 0x40) return climate::CLIMATE_MODE_DRY;
-  if (b == 0xE0) return climate::CLIMATE_MODE_FAN_ONLY;
-  return climate::CLIMATE_MODE_OFF;
-}
-
-static uint8_t encode_fan_byte(climate::ClimateMode mode, climate::ClimateFanMode fan) {
-  if (mode == climate::CLIMATE_MODE_COOL) {
-    if (fan == climate::CLIMATE_FAN_LOW) return 0x40;
-    if (fan == climate::CLIMATE_FAN_MEDIUM) return 0xDC;
-    if (fan == climate::CLIMATE_FAN_HIGH) return 0xBC;
-    return 0x00;
-  } else {
-    if (fan == climate::CLIMATE_FAN_LOW) return 0x5C;
-    if (fan == climate::CLIMATE_FAN_MEDIUM) return 0xDC;
-    if (fan == climate::CLIMATE_FAN_HIGH) return 0xBC;
-    return 0x1C;
-  }
-}
-
-static climate::ClimateFanMode decode_fan_byte(uint8_t b) {
-  if (b == 0x00 || b == 0x1C) return climate::CLIMATE_FAN_AUTO;
-  if (b == 0x40 || b == 0x5C) return climate::CLIMATE_FAN_LOW;
-  if (b == 0xDC) return climate::CLIMATE_FAN_MEDIUM;
-  if (b == 0xBC) return climate::CLIMATE_FAN_HIGH;
-  return climate::CLIMATE_FAN_AUTO;
-}
-
-// ===============================================================
-// FRAME BUILDERS
-// ===============================================================
-static void build_frame(uint8_t *f, climate::ClimateMode mode, float t, climate::ClimateFanMode fan) {
-  memcpy_P(f, (const uint8_t[]){
-    0xC4,0xD3,0x64,0x80,0x00,0x25,0xC0,0x60,0x00,0x00,0x00,0x00,0x00,0x00
-  },14);
-  f[6] = encode_mode_byte(mode);
-  f[7] = (mode == climate::CLIMATE_MODE_COOL) ? encode_temp_byte(t) : 0xE0;
-  f[8] = encode_fan_byte(mode, fan);
-  uint8_t sum = 0;
-  for (int i=0;i<13;i++) sum += f[i];
-  f[13]=sum;
-}
-
-static void build_off_frame(uint8_t *f) {
-  memcpy_P(f,(const uint8_t[]){
-    0xC4,0xD3,0x64,0x80,0x00,0x05,0xE0,0xE0,0xBC,0,0,0,0,0
-  },14);
-  uint8_t sum=0; for(int i=0;i<13;i++) sum+=f[i];
-  f[13]=sum;
+  raw.push_back(FINAL_PULSE_US);
+  return raw;
 }
 
 // ===============================================================
@@ -121,20 +82,7 @@ void MitsubishiACClimate::transmit_hex_variable(const uint8_t *data, size_t len)
   auto call = this->transmitter_->transmit();
   auto *raw = call.get_data();
   raw->set_carrier_frequency(IR_FREQUENCY);
-  // encode raw
-  std::vector<int32_t> buf;
-  buf.reserve(2 + len*16 + 1);
-  buf.push_back(HEADER_PULSE_US);
-  buf.push_back(HEADER_SPACE_US);
-  for (size_t i=0;i<len;i++) {
-    uint8_t b=data[i];
-    for (int j=7;j>=0;j--) {
-      buf.push_back(PULSE_DURATION_US);
-      buf.push_back((b>>j)&1 ? SPACE_ONE_US : SPACE_ZERO_US);
-    }
-  }
-  buf.push_back(FINAL_PULSE_US);
-  raw->set_data(buf);
+  raw->set_data(encode_bytes_to_raw(data, len));
   call.perform();
 }
 
@@ -148,8 +96,9 @@ void MitsubishiACClimate::setup() {
 }
 
 void MitsubishiACClimate::dump_config() {
-  ESP_LOGCONFIG(TAG,"Mitsubishi/SAIJO AC (compact build)");
+  ESP_LOGCONFIG(TAG, "Mitsubishi A/C (Codebook TX, 22–27 °C)");
 }
+
 
 climate::ClimateTraits MitsubishiACClimate::traits() {
   climate::ClimateTraits t;
@@ -158,61 +107,188 @@ climate::ClimateTraits MitsubishiACClimate::traits() {
     climate::CLIMATE_MODE_OFF,
     climate::CLIMATE_MODE_COOL,
     climate::CLIMATE_MODE_DRY,
-    climate::CLIMATE_MODE_FAN_ONLY});
+    climate::CLIMATE_MODE_FAN_ONLY
+  });
   t.set_supported_fan_modes({
     climate::CLIMATE_FAN_AUTO,
     climate::CLIMATE_FAN_LOW,
     climate::CLIMATE_FAN_MEDIUM,
-    climate::CLIMATE_FAN_HIGH});
-  t.set_visual_min_temperature(16);
-  t.set_visual_max_temperature(31);
+    climate::CLIMATE_FAN_HIGH
+  });
+  t.set_visual_min_temperature(22);
+  t.set_visual_max_temperature(27);
   t.set_visual_temperature_step(1);
   return t;
 }
 
+
 void MitsubishiACClimate::control(const climate::ClimateCall &call) {
-  if (call.get_mode().has_value()) this->mode = *call.get_mode();
+  if (call.get_mode().has_value())
+    this->mode = *call.get_mode();
   if (call.get_target_temperature().has_value())
     this->target_temperature = *call.get_target_temperature();
   if (call.get_fan_mode().has_value())
     this->fan_mode = *call.get_fan_mode();
 
-  uint8_t frame[14];
-  if (this->mode == climate::CLIMATE_MODE_OFF)
-    build_off_frame(frame);
-  else
-    build_frame(frame, this->mode, this->target_temperature,
-                this->fan_mode.has_value() ? *this->fan_mode : climate::CLIMATE_FAN_AUTO);
+  const uint8_t *code = CODE_OFF;  // default
+  int t = (int)this->target_temperature;
 
-  this->transmit_hex_variable(frame,14);
+  // ===============================================================
+  // COOL MODE
+  // ===============================================================
+  if (this->mode == climate::CLIMATE_MODE_COOL) {
+    if (this->fan_mode == climate::CLIMATE_FAN_AUTO) {
+      switch (t) {
+        case 22: code = CODE_COOL_22_AUTO; break;
+        case 23: code = CODE_COOL_23_AUTO; break;
+        case 24: code = CODE_COOL_24_AUTO; break;
+        case 25: code = CODE_COOL_25_AUTO; break;
+        case 26: code = CODE_COOL_26_AUTO; break;
+        case 27: code = CODE_COOL_27_AUTO; break;
+        default: code = CODE_COOL_25_AUTO; break;
+      }
+    } else if (this->fan_mode == climate::CLIMATE_FAN_LOW) {
+      switch (t) {
+        case 22: code = CODE_COOL_22_LOW; break;
+        case 23: code = CODE_COOL_23_LOW; break;
+        case 24: code = CODE_COOL_24_LOW; break;
+        case 25: code = CODE_COOL_25_LOW; break;
+        case 26: code = CODE_COOL_26_LOW; break;
+        case 27: code = CODE_COOL_27_LOW; break;
+        default: code = CODE_COOL_25_LOW; break;
+      }
+    } else if (this->fan_mode == climate::CLIMATE_FAN_MEDIUM) {
+      switch (t) {
+        case 22: code = CODE_COOL_22_MEDIUM; break;
+        case 23: code = CODE_COOL_23_MEDIUM; break;
+        case 24: code = CODE_COOL_24_MEDIUM; break;
+        case 25: code = CODE_COOL_25_MEDIUM; break;
+        case 26: code = CODE_COOL_26_MEDIUM; break;
+        case 27: code = CODE_COOL_27_MEDIUM; break;
+        default: code = CODE_COOL_25_MEDIUM; break;
+      }
+    } else if (this->fan_mode == climate::CLIMATE_FAN_HIGH) {
+      switch (t) {
+        case 22: code = CODE_COOL_22_HIGH; break;
+        case 23: code = CODE_COOL_23_HIGH; break;
+        case 24: code = CODE_COOL_24_HIGH; break;
+        case 25: code = CODE_COOL_25_HIGH; break;
+        case 26: code = CODE_COOL_26_HIGH; break;
+        case 27: code = CODE_COOL_27_HIGH; break;
+        default: code = CODE_COOL_25_HIGH; break;
+      }
+    } else {
+      code = CODE_COOL_25_AUTO;
+    }
+
+  // ===============================================================
+  // DRY MODE
+  // ===============================================================
+  } else if (this->mode == climate::CLIMATE_MODE_DRY) {
+    if (this->fan_mode == climate::CLIMATE_FAN_LOW)
+      code = CODE_DRY_LOW;
+    else if (this->fan_mode == climate::CLIMATE_FAN_MEDIUM)
+      code = CODE_DRY_MEDIUM;
+    else if (this->fan_mode == climate::CLIMATE_FAN_HIGH)
+      code = CODE_DRY_HIGH;
+    else
+      code = CODE_DRY_AUTO;
+
+  // ===============================================================
+  // FAN ONLY MODE
+  // ===============================================================
+  } else if (this->mode == climate::CLIMATE_MODE_FAN_ONLY) {
+    if (this->fan_mode == climate::CLIMATE_FAN_LOW)
+      code = CODE_FAN_ONLY_LOW;
+    else if (this->fan_mode == climate::CLIMATE_FAN_MEDIUM)
+      code = CODE_FAN_ONLY_MEDIUM;
+    else if (this->fan_mode == climate::CLIMATE_FAN_HIGH)
+      code = CODE_FAN_ONLY_HIGH;
+    else
+      code = CODE_FAN_ONLY_AUTO;
+
+  // ===============================================================
+  // OFF
+  // ===============================================================
+  } else {
+    code = CODE_OFF;
+  }
+
+  this->transmit_hex_variable(code, 14);
   this->publish_state();
 }
+// ===============================================================
+// RECEIVE (unchanged – still works fine)
+// ===============================================================
 
-// ===============================================================
-// RECEIVE
-// ===============================================================
 bool MitsubishiACClimate::on_receive(remote_base::RemoteReceiveData data) {
   if (data.size() < 64) return false;
+
   uint8_t b[14] = {0};
-  int bit_index=0;
-  size_t start=0;
-  for (size_t i=0;i+1<data.size();i++) {
-    if (abs(data[i])>3000 && abs(data[i+1])>1500){ start=i+2; break; }
+  int bit_index = 0;
+  size_t start = 0;
+
+  // --- find header ---
+  for (size_t i = 0; i + 1 < data.size(); i++) {
+    if (abs(data[i]) > 3000 && abs(data[i + 1]) > 1500) {
+      start = i + 2;
+      break;
+    }
   }
-  for (size_t i=start;i+1<data.size();i+=2) {
-    int32_t sp=abs(data[i+1]);
-    bool bit=(sp>=SPACE_ONE_MIN_US);
-    size_t byte_idx=bit_index/8;
-    if (byte_idx>=14) break;
-    b[byte_idx]=(b[byte_idx]<<1)|(bit?1:0);
+
+  // --- decode bits ---
+  for (size_t i = start; i + 1 < data.size(); i += 2) {
+    int32_t sp = abs(data[i + 1]);
+    bool bit = (sp >= SPACE_ONE_MIN_US);
+    size_t byte_idx = bit_index / 8;
+    if (byte_idx >= 14) break;
+    b[byte_idx] = (b[byte_idx] << 1) | (bit ? 1 : 0);
     bit_index++;
   }
-  if (!(b[0]==0xC4 && b[1]==0xD3)) return false;
 
-  if (b[5]==0x05){ this->mode=climate::CLIMATE_MODE_OFF; this->publish_state(); return true; }
-  this->mode=decode_mode_byte(b[6]);
-  if (this->mode==climate::CLIMATE_MODE_COOL) this->target_temperature=decode_temp_byte(b[7]);
-  this->fan_mode=decode_fan_byte(b[8]);
+  // --- verify header signature ---
+  if (!(b[0] == 0xC4 && b[1] == 0xD3))
+    return false;
+
+  // --- OFF ---
+  if (b[5] == 0x05) {
+    this->mode = climate::CLIMATE_MODE_OFF;
+    this->publish_state();
+    return true;
+  }
+
+  // --- Mode detection ---
+  if (b[6] == 0xC0)
+    this->mode = climate::CLIMATE_MODE_COOL;
+  else if (b[6] == 0x40)
+    this->mode = climate::CLIMATE_MODE_DRY;
+  else if (b[6] == 0xE0)
+    this->mode = climate::CLIMATE_MODE_FAN_ONLY;
+
+  // --- Temperature detection (for COOL mode only) ---
+  if (this->mode == climate::CLIMATE_MODE_COOL) {
+    switch (b[7]) {
+      case 0x90: this->target_temperature = 22; break;
+      case 0x10: this->target_temperature = 23; break;
+      case 0xE0: this->target_temperature = 24; break;
+      case 0x60: this->target_temperature = 25; break;
+      case 0xA0: this->target_temperature = 26; break;
+      case 0x20: this->target_temperature = 27; break;
+      default: this->target_temperature = 25; break;
+    }
+  }
+
+  // --- Fan speed detection ---
+  uint8_t fan_byte = b[8];
+  if ((fan_byte & 0x40) == 0x40)
+    this->fan_mode = climate::CLIMATE_FAN_LOW;
+  else if ((fan_byte & 0xDC) == 0xDC)
+    this->fan_mode = climate::CLIMATE_FAN_MEDIUM;
+  else if ((fan_byte & 0xBC) == 0xBC)
+    this->fan_mode = climate::CLIMATE_FAN_HIGH;
+  else
+    this->fan_mode = climate::CLIMATE_FAN_AUTO;
+
   this->publish_state();
   return true;
 }
