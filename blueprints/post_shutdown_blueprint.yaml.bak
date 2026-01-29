@@ -54,6 +54,8 @@ condition:
          trigger.from_state.state in ['cool','dry','heat_cool','heat','auto'] }}
 
 action:
+  - delay: "00:00:01"
+
   - alias: "Switch to fan-only mode"
     service: climate.set_hvac_mode
     target:
